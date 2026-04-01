@@ -45,6 +45,7 @@ String inputBuffer;
 float throttlePercent = 0.0f;
 bool telemetryStreaming = false;
 bool promptShown = false;
+bool lastConsoleCharWasCarriageReturn = false;
 
 // -------------------- CLI history --------------------
 static constexpr int CLI_HISTORY_SIZE = 10;
@@ -250,11 +251,22 @@ void startRamp(float targetPercent, unsigned long durationMs) {
     if (targetPercent < 0.0f) targetPercent = 0.0f;
     if (targetPercent > 100.0f) targetPercent = 100.0f;
 
+    if (durationMs == 0) {
+        cancelRamp();
+        writeThrottlePercent(targetPercent);
+        return;
+    }
+
     ramp.active = true;
     ramp.startPercent = throttlePercent;
     ramp.targetPercent = targetPercent;
     ramp.startMs = millis();
     ramp.durationMs = durationMs;
+}
+
+unsigned long calculateThrottleRampDurationMs(float currentPercent, float targetPercent) {
+    float deltaPercent = fabsf(targetPercent - currentPercent);
+    return (unsigned long)((deltaPercent / 30.0f) * 1000.0f);
 }
 
 void updateRamp() {
@@ -1119,19 +1131,36 @@ bool runMotorTest() {
 
     Serial.println("Starting motor test...");
     Serial.println("Step rule:");
-    Serial.println("  all steps -> 2 seconds total");
-    Serial.println("  first 1 second = stabilization");
-    Serial.println("  next 1 second = averaging");
+    Serial.println("  each step -> proportional ramp + 1.5 seconds at target");
+    Serial.println("  first 0.5 second at target = stabilization");
+    Serial.println("  next 1 second at target = averaging");
     Serial.println("Press X for emergency ramp-down");
 
     for (int step = 0; step <= 100; step += TEST_STEP_PERCENT) {
+        unsigned long rampDurationMs = calculateThrottleRampDurationMs(throttlePercent, (float)step);
+
         Serial.print("Testing throttle ");
         Serial.print(step);
-        Serial.println("%");
+        Serial.print("%");
+        if (rampDurationMs > 0) {
+            Serial.print(" with ");
+            Serial.print(rampDurationMs);
+            Serial.println(" ms ramp");
+        } else {
+            Serial.println();
+        }
 
-        writeThrottlePercent((float)step);
+        startRamp((float)step, rampDurationMs);
 
-        if (!updateTelemetryDuringBlockingWait(1000)) {
+        if (rampDurationMs > 0) {
+            if (!updateTelemetryDuringBlockingWait(rampDurationMs)) {
+                testRunning = false;
+                Serial.println("Motor test aborted by emergency stop");
+                return false;
+            }
+        }
+
+        if (!updateTelemetryDuringBlockingWait(500)) {
             testRunning = false;
             Serial.println("Motor test aborted by emergency stop");
             return false;
@@ -1247,7 +1276,7 @@ void printHelp() {
     Serial.println("  motor start                  -> start motor at 5%");
     Serial.println("  motor stop                   -> ramp down to 0% in 3 seconds");
     Serial.println("  motor stop now               -> immediate stop");
-    Serial.println("  motor set <0-100>            -> set throttle percent immediately");
+    Serial.println("  motor set <0-100>            -> softly ramp to target (1 s per 30%)");
     Serial.println("  motor ramp                   -> ramp from current throttle to 100% in 10 seconds");
     Serial.println("  motor test                   -> full automatic motor test and CSV output");
     Serial.println("  X                            -> emergency ramp-down to 0% in 3 seconds");
@@ -1327,11 +1356,21 @@ void handleCommand(String cmd) {
             return;
         }
 
-        cancelRamp();
-        writeThrottlePercent(value);
-        Serial.print("Throttle set to ");
-        Serial.print(throttlePercent, 1);
-        Serial.println("%");
+        unsigned long durationMs = calculateThrottleRampDurationMs(throttlePercent, value);
+        startRamp(value, durationMs);
+
+        if (durationMs == 0) {
+            Serial.print("Throttle already at ");
+            Serial.print(throttlePercent, 1);
+            Serial.println("%");
+            return;
+        }
+
+        Serial.print("Throttle ramping to ");
+        Serial.print(value, 1);
+        Serial.print("% in ");
+        Serial.print(durationMs);
+        Serial.println(" ms");
         return;
     }
 
@@ -1421,6 +1460,13 @@ void readConsole() {
     while (Serial.available()) {
         char c = (char)Serial.read();
 
+        if (c == '\n' && lastConsoleCharWasCarriageReturn) {
+            lastConsoleCharWasCarriageReturn = false;
+            continue;
+        }
+
+        lastConsoleCharWasCarriageReturn = (c == '\r');
+
         if (c == 'X' || c == 'x') {
             inputBuffer = "";
             promptShown = false;
@@ -1462,8 +1508,7 @@ void readConsole() {
                 inputBuffer.remove(inputBuffer.length() - 1);
                 Serial.print("\b \b");
             }
-        } else if (c == '\r') {
-        } else if (c == '\n') {
+        } else if (c == '\r' || c == '\n') {
             Serial.println();
             promptShown = false;
 
