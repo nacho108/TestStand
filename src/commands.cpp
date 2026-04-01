@@ -16,6 +16,7 @@ void printHelp() {
     Serial.println("  motor set <0-100>            -> softly ramp to target (1 s per 30%)");
     Serial.println("  motor ramp                   -> ramp from current throttle to 100% in 10 seconds");
     Serial.println("  motor test                   -> full automatic motor test and CSV output");
+    Serial.println("  pass                         -> reboot into ESC passthrough mode");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
     Serial.println("  telemetry on                 -> start periodic telemetry output");
@@ -80,6 +81,11 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("motor test")) {
         runMotorTest();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("pass") || cmd.equalsIgnoreCase("passthrough")) {
+        requestEscPassthroughModeAndRestart();
         return;
     }
 

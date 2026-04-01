@@ -15,6 +15,10 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
 
+    if (consumeEscPassthroughRequest()) {
+        runEscPassthroughMode();
+    }
+
     Serial.println();
     Serial.println("ESP32 + AM32 CLI (PWM + telemetry + scale)");
 

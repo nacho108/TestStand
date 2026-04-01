@@ -14,3 +14,6 @@ void stopMotorSlow();
 void emergencyStopRamp();
 void startMotorAtFivePercent();
 void rampToFullPower();
+void requestEscPassthroughModeAndRestart();
+bool consumeEscPassthroughRequest();
+void runEscPassthroughMode();
