@@ -7,3 +7,25 @@
 *.elf
 *.map
 *.log
+
+# Temp folders
+.tmp*
+.tmp-*
+*.tmp
+
+# Headless/browser test artifacts
+.tmp-chrome*
+.tmp-headless*
+
+# PlatformIO
+.pio/
+.vscode/.browse.c_cpp.db*
+.vscode/ipch/
+
+# Build artifacts
+build/
+dist/
+
+# OS junk
+.DS_Store
+Thumbs.db

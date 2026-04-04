@@ -33,10 +33,7 @@
     {
       "text": "$(plug)",
       "tooltip": "Monitor",
-	  "commands": [
-    {
-      "id": "platformio-ide.runPIOCoreCommand",
-      "args": "pio device monitor"
+      "commands": "platformio-ide.Serial monitor"
     }
   ]
 }

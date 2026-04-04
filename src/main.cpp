@@ -69,6 +69,7 @@ void loop() {
     updateRamp();
     pollEscTelemetry();
     pollScale();
+    updateWebServer();
 
     static unsigned long lastPrint = 0;
     if (!testRunning && telemetryStreaming && millis() - lastPrint >= 1000) {

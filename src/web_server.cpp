@@ -15,7 +15,9 @@
 namespace {
 
 AsyncWebServer server(80);
+AsyncWebSocket telemetrySocket("/ws");
 bool webServerStarted = false;
+unsigned long lastTelemetryBroadcastMs = 0;
 
 void appendJsonBool(String& json, const char* key, bool value, bool withComma = true) {
     json += "\"";
@@ -97,6 +99,30 @@ String buildStatusJson() {
     return json;
 }
 
+void handleWebSocketEvent(
+    AsyncWebSocket* socket,
+    AsyncWebSocketClient* client,
+    AwsEventType type,
+    void* arg,
+    uint8_t* data,
+    size_t len
+) {
+    (void)socket;
+    (void)arg;
+    (void)data;
+    (void)len;
+
+    if (type == WS_EVT_CONNECT) {
+        client->text(buildStatusJson());
+        return;
+    }
+
+    if (type == WS_EVT_DISCONNECT) {
+        Serial.print("WebSocket client disconnected: ");
+        Serial.println(client->id());
+    }
+}
+
 }
 
 bool beginWebServer() {
@@ -128,6 +154,9 @@ bool beginWebServer() {
         request->send(200, "application/json", buildStatusJson());
     });
 
+    telemetrySocket.onEvent(handleWebSocketEvent);
+    server.addHandler(&telemetrySocket);
+
     server.serveStatic("/", LittleFS, "/")
         .setDefaultFile("index.html");
 
@@ -146,4 +175,20 @@ bool beginWebServer() {
     Serial.println(WiFi.softAPIP());
 
     return true;
+}
+
+void updateWebServer() {
+    if (!webServerStarted) {
+        return;
+    }
+
+    telemetrySocket.cleanupClients();
+
+    const unsigned long nowMs = millis();
+    if (nowMs - lastTelemetryBroadcastMs < 250) {
+        return;
+    }
+
+    lastTelemetryBroadcastMs = nowMs;
+    telemetrySocket.textAll(buildStatusJson());
 }
