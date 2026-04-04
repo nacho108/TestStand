@@ -1,0 +1,39 @@
+{
+  "platformio-ide.toolbar": [
+    {
+      "text": "$(home)",
+      "tooltip": "PlatformIO Home",
+      "commands": "platformio-ide.home"
+    },
+    {
+      "text": "$(check)",
+      "tooltip": "Build",
+      "commands": "platformio-ide.build"
+    },
+    {
+      "text": "$(arrow-up)",
+      "tooltip": "Upload firmware",
+      "commands": "platformio-ide.upload"
+    },
+    {
+      "text": "$(database)",
+      "tooltip": "Upload LittleFS",
+      "commands": [
+        {
+          "id": "platformio-ide.runPIOCoreCommand",
+          "args": "run -t uploadfs"
+        }
+      ]
+    },
+    {
+      "text": "$(trash)",
+      "tooltip": "Clean",
+      "commands": "platformio-ide.clean"
+    },
+    {
+      "text": "$(plug)",
+      "tooltip": "Monitor",
+      "commands": "platformio-ide.monitor"
+    }
+  ]
+}
