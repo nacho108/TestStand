@@ -10,6 +10,7 @@
 #include "ir_manager.h"
 #include "motor_control.h"
 #include "scale_manager.h"
+#include "test_runner.h"
 
 void setup() {
     Serial.begin(115200);
@@ -47,6 +48,11 @@ void setup() {
 
     beginMotorControl();
     beginEscTelemetry();
+    if (beginTestStorage()) {
+        Serial.println("LittleFS test storage ready.");
+    } else {
+        Serial.println("WARNING: LittleFS test storage init failed.");
+    }
 
     Serial.println("Ready.");
     printHelp();

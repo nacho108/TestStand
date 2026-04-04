@@ -8,6 +8,49 @@
 #include "scale_manager.h"
 #include "test_runner.h"
 
+namespace {
+
+bool parseFilenameArgument(const String& cmd, const char* prefix, String& filename) {
+    if (!cmd.startsWith(prefix)) {
+        return false;
+    }
+
+    filename = cmd.substring(strlen(prefix));
+    filename.trim();
+    return true;
+}
+
+void handlePendingTestSaveCommand(const String& cmd) {
+    if (testSavePromptPending) {
+        if (cmd.equalsIgnoreCase("yes")) {
+            testSavePromptPending = false;
+            testFilenamePromptPending = true;
+            Serial.println("Enter file name for the test:");
+            return;
+        }
+
+        if (cmd.equalsIgnoreCase("no")) {
+            testSavePromptPending = false;
+            Serial.println("Test was not saved");
+            return;
+        }
+
+        Serial.println("Please answer YES or NO");
+        return;
+    }
+
+    if (testFilenamePromptPending) {
+        if (saveLastTestToLittleFS(cmd)) {
+            testFilenamePromptPending = false;
+            return;
+        }
+
+        Serial.println("Enter a different file name:");
+    }
+}
+
+}
+
 void printHelp() {
     Serial.println("Commands:");
     Serial.println("  motor start                  -> start motor at 5%");
@@ -16,6 +59,9 @@ void printHelp() {
     Serial.println("  motor set <0-100>            -> softly ramp to target (1 s per 30%)");
     Serial.println("  motor ramp                   -> ramp from current throttle to 100% in 10 seconds");
     Serial.println("  motor test                   -> full automatic motor test and CSV output");
+    Serial.println("  test list                    -> list saved test CSV files in LittleFS");
+    Serial.println("  test get <filename>          -> print a saved test CSV file");
+    Serial.println("  test remove <filename>       -> delete a saved test CSV file");
     Serial.println("  pass                         -> reboot into ESC passthrough mode");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
@@ -40,6 +86,11 @@ void handleCommand(String cmd) {
     cmd.trim();
 
     if (cmd.length() == 0) {
+        return;
+    }
+
+    if (testSavePromptPending || testFilenamePromptPending) {
+        handlePendingTestSaveCommand(cmd);
         return;
     }
 
@@ -81,6 +132,22 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("motor test")) {
         runMotorTest();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("test list")) {
+        listSavedTests();
+        return;
+    }
+
+    String filename;
+    if (parseFilenameArgument(cmd, "test get ", filename)) {
+        printSavedTest(filename);
+        return;
+    }
+
+    if (parseFilenameArgument(cmd, "test remove ", filename)) {
+        removeSavedTest(filename);
         return;
     }
 

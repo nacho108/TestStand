@@ -1,5 +1,6 @@
 #include "test_runner.h"
 
+#include <LittleFS.h>
 #include <math.h>
 
 #include "app_config.h"
@@ -10,6 +11,8 @@
 #include "scale_manager.h"
 
 namespace {
+
+constexpr const char* kTestStorageDir = "/tests";
 
 void clearTestResults() {
     testResultCount = 0;
@@ -27,32 +30,221 @@ bool storeTestResult(const TestResultRow& row) {
     return true;
 }
 
-void printTestResultsCsv() {
-    Serial.println();
-    Serial.println("CSV BEGIN");
-    Serial.println("ThrottlePercent,VoltageV,CurrentA,PowerW,RPM,ESCTemperatureC,WeightGrams");
+String buildTestCsv() {
+    String csv;
+    csv.reserve(1024);
+    csv += "ThrottlePercent,VoltageV,CurrentA,PowerW,RPM,ESCTemperatureC,WeightGrams\n";
 
     for (int i = 0; i < testResultCount; i++) {
         const TestResultRow& r = testResults[i];
-        Serial.print(r.throttlePercent);
-        Serial.print(",");
-        Serial.print(r.voltageV, 3);
-        Serial.print(",");
-        Serial.print(r.currentA, 3);
-        Serial.print(",");
-        Serial.print(r.powerW, 3);
-        Serial.print(",");
-        Serial.print(r.rpm, 1);
-        Serial.print(",");
-        Serial.print(r.temperatureC, 2);
-        Serial.print(",");
-        Serial.println(r.weightGrams, 3);
+        csv += String(r.throttlePercent);
+        csv += ",";
+        csv += String(r.voltageV, 3);
+        csv += ",";
+        csv += String(r.currentA, 3);
+        csv += ",";
+        csv += String(r.powerW, 3);
+        csv += ",";
+        csv += String(r.rpm, 1);
+        csv += ",";
+        csv += String(r.temperatureC, 2);
+        csv += ",";
+        csv += String(r.weightGrams, 3);
+        csv += "\n";
     }
+
+    return csv;
+}
+
+void printTestResultsCsv() {
+    Serial.println();
+    Serial.println("CSV BEGIN");
+    Serial.print(buildTestCsv());
 
     Serial.println("CSV END");
     Serial.println();
 }
 
+String buildTestPath(const String& normalizedFilename) {
+    return String(kTestStorageDir) + "/" + normalizedFilename;
+}
+
+}
+
+bool beginTestStorage() {
+    if (!LittleFS.begin(true)) {
+        return false;
+    }
+
+    if (!LittleFS.exists(kTestStorageDir) && !LittleFS.mkdir(kTestStorageDir)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool hasTestResults() {
+    return testResultCount > 0;
+}
+
+String normalizeTestFilename(const String& filename) {
+    String trimmed = filename;
+    trimmed.trim();
+
+    if (trimmed.length() == 0) {
+        return "";
+    }
+
+    String normalized;
+    normalized.reserve(trimmed.length() + 4);
+
+    for (size_t i = 0; i < trimmed.length(); i++) {
+        char c = trimmed.charAt(i);
+        if ((c >= 'a' && c <= 'z') ||
+            (c >= 'A' && c <= 'Z') ||
+            (c >= '0' && c <= '9') ||
+            c == '-' || c == '_' || c == '.') {
+            normalized += c;
+        } else if (c == ' ') {
+            normalized += '_';
+        } else {
+            return "";
+        }
+    }
+
+    if (normalized.length() == 0 || normalized == "." || normalized == "..") {
+        return "";
+    }
+
+    if (!normalized.endsWith(".csv")) {
+        normalized += ".csv";
+    }
+
+    return normalized;
+}
+
+bool saveLastTestToLittleFS(const String& filename) {
+    if (!hasTestResults()) {
+        Serial.println("No test results available to save");
+        return false;
+    }
+
+    const String normalized = normalizeTestFilename(filename);
+    if (normalized.length() == 0) {
+        Serial.println("Invalid file name. Use letters, digits, space, '-', '_' or '.'");
+        return false;
+    }
+
+    const String path = buildTestPath(normalized);
+    File file = LittleFS.open(path, FILE_WRITE);
+    if (!file) {
+        Serial.print("Failed to open file for writing: ");
+        Serial.println(path);
+        return false;
+    }
+
+    const String csv = buildTestCsv();
+    const size_t written = file.print(csv);
+    file.close();
+
+    if (written != csv.length()) {
+        Serial.print("Failed to fully write file: ");
+        Serial.println(path);
+        return false;
+    }
+
+    Serial.print("Saved test to ");
+    Serial.println(path);
+    return true;
+}
+
+void listSavedTests() {
+    File dir = LittleFS.open(kTestStorageDir);
+    if (!dir || !dir.isDirectory()) {
+        Serial.println("Test storage directory is not available");
+        return;
+    }
+
+    File entry = dir.openNextFile();
+    if (!entry) {
+        Serial.println("No saved tests");
+        return;
+    }
+
+    Serial.println("Saved tests:");
+    while (entry) {
+        if (!entry.isDirectory()) {
+            String name = entry.name();
+            const int slashPos = name.lastIndexOf('/');
+            if (slashPos >= 0) {
+                name = name.substring(slashPos + 1);
+            }
+
+            Serial.print("  ");
+            Serial.print(name);
+            Serial.print(" (");
+            Serial.print((unsigned long)entry.size());
+            Serial.println(" bytes)");
+        }
+
+        entry = dir.openNextFile();
+    }
+}
+
+bool removeSavedTest(const String& filename) {
+    const String normalized = normalizeTestFilename(filename);
+    if (normalized.length() == 0) {
+        Serial.println("Invalid file name");
+        return false;
+    }
+
+    const String path = buildTestPath(normalized);
+    if (!LittleFS.exists(path)) {
+        Serial.print("Saved test not found: ");
+        Serial.println(path);
+        return false;
+    }
+
+    if (!LittleFS.remove(path)) {
+        Serial.print("Failed to remove file: ");
+        Serial.println(path);
+        return false;
+    }
+
+    Serial.print("Removed ");
+    Serial.println(path);
+    return true;
+}
+
+bool printSavedTest(const String& filename) {
+    const String normalized = normalizeTestFilename(filename);
+    if (normalized.length() == 0) {
+        Serial.println("Invalid file name");
+        return false;
+    }
+
+    const String path = buildTestPath(normalized);
+    File file = LittleFS.open(path, FILE_READ);
+    if (!file) {
+        Serial.print("Saved test not found: ");
+        Serial.println(path);
+        return false;
+    }
+
+    Serial.println();
+    Serial.println("FILE BEGIN");
+    while (file.available()) {
+        Serial.write(file.read());
+    }
+    file.close();
+
+    if (!Serial.availableForWrite()) {
+        Serial.println();
+    }
+
+    Serial.println();
+    Serial.println("FILE END");
+    return true;
 }
 
 bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
@@ -223,5 +415,8 @@ bool runMotorTest() {
 
     Serial.println("Motor test completed.");
     printTestResultsCsv();
+    testSavePromptPending = true;
+    testFilenamePromptPending = false;
+    Serial.println("Would you like to save the test? Type YES to save or NO to skip.");
     return true;
 }

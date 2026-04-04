@@ -37,3 +37,5 @@ LinearCalibration currentCal;
 TestResultRow testResults[TEST_MAX_RESULTS];
 int testResultCount = 0;
 bool testRunning = false;
+bool testSavePromptPending = false;
+bool testFilenamePromptPending = false;

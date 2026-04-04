@@ -46,3 +46,5 @@ extern LinearCalibration currentCal;
 extern TestResultRow testResults[TEST_MAX_RESULTS];
 extern int testResultCount;
 extern bool testRunning;
+extern bool testSavePromptPending;
+extern bool testFilenamePromptPending;
