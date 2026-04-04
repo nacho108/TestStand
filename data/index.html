@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TestStand</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">ESP32 Test Stand</p>
+      <h1>Local control page is live.</h1>
+      <p class="lede">
+        This site is being served directly from LittleFS over the ESP32 access point.
+      </p>
+    </section>
+
+    <section class="card-grid">
+      <article class="card">
+        <h2>Connect</h2>
+        <p>Join the <strong>TestStand-ESP32</strong> Wi-Fi network from your phone or computer.</p>
+      </article>
+
+      <article class="card">
+        <h2>Browse</h2>
+        <p>Open <code>http://192.168.4.1</code> to reach the static web app hosted on LittleFS.</p>
+      </article>
+
+      <article class="card">
+        <h2>Next Step</h2>
+        <p>This page is ready to grow into a live dashboard for tests, telemetry, and saved CSV files.</p>
+      </article>
+    </section>
+
+    <section class="status-panel">
+      <div>
+        <span class="label">Hosting</span>
+        <strong id="hosting-status">Checking...</strong>
+      </div>
+      <div>
+        <span class="label">Assets</span>
+        <strong>LittleFS</strong>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

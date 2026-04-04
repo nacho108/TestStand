@@ -11,6 +11,7 @@
 #include "motor_control.h"
 #include "scale_manager.h"
 #include "test_runner.h"
+#include "web_server.h"
 
 void setup() {
     Serial.begin(115200);
@@ -50,6 +51,9 @@ void setup() {
     beginEscTelemetry();
     if (beginTestStorage()) {
         Serial.println("LittleFS test storage ready.");
+        if (!beginWebServer()) {
+            Serial.println("WARNING: Web server init failed.");
+        }
     } else {
         Serial.println("WARNING: LittleFS test storage init failed.");
     }
