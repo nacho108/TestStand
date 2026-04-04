@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-static constexpr int ESC_PWM_PIN = 27;
+static constexpr int ESC_PWM_PIN = 4;
 static constexpr int ESC_TLM_RX_PIN = 16;
 
 static constexpr int PWM_FREQ = 50;
