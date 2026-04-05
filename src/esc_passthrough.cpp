@@ -1,9 +1,11 @@
 #include "motor_control.h"
 
+#include <cstring>
 #include <SoftwareSerial.h>
 
 #include "app_config.h"
 #include "app_state.h"
+#include "esc_telemetry.h"
 
 namespace {
 
@@ -72,6 +74,24 @@ constexpr uint8_t CMD_KEEP_ALIVE = 0xFD;
 constexpr uint8_t CMD_SET_BUFFER = 0xFE;
 constexpr uint8_t CMD_SET_ADDRESS = 0xFF;
 constexpr uint8_t BR_SUCCESS = 0x30;
+constexpr uint8_t ESC_PARAM_READ_SIZE = 48 + 32;
+
+struct EscBootInfo {
+    uint8_t pinCode = 0;
+    uint8_t flashSizeCode = 0;
+    uint8_t infoByte5 = 0;
+    uint8_t infoByte6 = 0;
+    uint8_t protocolVersion = 0;
+    uint8_t addressShift = 0;
+    uint32_t absoluteEepromAddress = 0;
+    uint16_t encodedEepromAddress = 0;
+    const char* deviceName = "Unknown";
+};
+
+void initEscSerial();
+void deinitEscSerial();
+uint16_t sendEsc(uint8_t txBuf[], uint16_t bufSize, bool sendCrc);
+uint16_t getEsc(uint8_t rxBuf[], uint16_t waitMs);
 
 uint16_t byteCrc(uint8_t data, uint16_t crc) {
     uint8_t xb = data;
@@ -96,6 +116,168 @@ uint16_t crcXmodemUpdate(uint16_t crc, uint8_t data) {
         }
     }
     return crc;
+}
+
+void flushEscSerialRx() {
+    while (escPassthroughSerial.available()) {
+        escPassthroughSerial.read();
+    }
+}
+
+void flushEscTelemetryRx() {
+    while (escSerial.available()) {
+        escSerial.read();
+    }
+}
+
+void printHexByte(uint8_t value) {
+    if (value < 0x10) {
+        Serial.print('0');
+    }
+    Serial.print(value, HEX);
+}
+
+void printHexBuffer(const char* label, const uint8_t* data, uint16_t length) {
+    Serial.print(label);
+    Serial.print(" (");
+    Serial.print(length);
+    Serial.println(" bytes)");
+
+    if (length == 0) {
+        Serial.println("  <none>");
+        return;
+    }
+
+    for (uint16_t i = 0; i < length; i++) {
+        if ((i % 16) == 0) {
+            Serial.print("  ");
+        }
+
+        printHexByte(data[i]);
+        Serial.print(' ');
+
+        if (((i % 16) == 15) || (i == length - 1)) {
+            Serial.println();
+        }
+    }
+}
+
+bool isPrintableAsciiByte(uint8_t value) {
+    return value >= 32 && value <= 126;
+}
+
+void printAsciiPreview(const char* label, const uint8_t* data, uint16_t length) {
+    Serial.print(label);
+    Serial.print(": ");
+    for (uint16_t i = 0; i < length; i++) {
+        Serial.print(isPrintableAsciiByte(data[i]) ? (char)data[i] : '.');
+    }
+    Serial.println();
+}
+
+uint16_t calculateEscResponseCrc(const uint8_t* data, uint16_t length) {
+    uint16_t crc = 0;
+    for (uint16_t i = 0; i < length; i++) {
+        crc = byteCrc(data[i], crc);
+    }
+    return crc;
+}
+
+bool checkEscResponseCrc(const uint8_t* data, uint16_t payloadPlusCrcLength) {
+    if (payloadPlusCrcLength < 2) {
+        return false;
+    }
+
+    uint16_t calculated = calculateEscResponseCrc(data, payloadPlusCrcLength - 2);
+    uint16_t received = (uint16_t)data[payloadPlusCrcLength - 2] |
+                        ((uint16_t)data[payloadPlusCrcLength - 1] << 8);
+    return calculated == received;
+}
+
+uint16_t trimReadResponsePrefix(uint8_t* rxBuf, uint16_t rxSize, uint16_t expectedPayloadLength) {
+    const uint16_t expectedPacketSize = expectedPayloadLength + 3;
+    if (rxSize <= expectedPacketSize) {
+        return rxSize;
+    }
+
+    const uint16_t trimBytes = rxSize - expectedPacketSize;
+    memmove(rxBuf, rxBuf + trimBytes, expectedPacketSize);
+    return expectedPacketSize;
+}
+
+bool parseEscBootInfo(const uint8_t* rxBuf, uint16_t rxSize, EscBootInfo& info) {
+    if (rxSize < 9 || rxBuf[rxSize - 1] != BR_SUCCESS) {
+        return false;
+    }
+
+    info.pinCode = rxBuf[3];
+    info.flashSizeCode = rxBuf[4];
+    info.infoByte5 = rxBuf[5];
+    info.infoByte6 = rxBuf[6];
+    info.protocolVersion = rxBuf[7];
+
+    switch (info.flashSizeCode) {
+        case 0x1F:
+            info.absoluteEepromAddress = 0x00007C00UL;
+            info.addressShift = 0;
+            info.deviceName = "F0 / 32 KB flash";
+            break;
+        case 0x35:
+            info.absoluteEepromAddress = 0x0000F800UL;
+            info.addressShift = 0;
+            info.deviceName = "64 KB flash";
+            break;
+        case 0x2B:
+            info.absoluteEepromAddress = 0x0001F800UL;
+            info.addressShift = 2;
+            info.deviceName = "G071 / 128 KB flash";
+            break;
+        default:
+            return false;
+    }
+
+    info.encodedEepromAddress = (uint16_t)(info.absoluteEepromAddress >> info.addressShift);
+    return true;
+}
+
+uint16_t getEncodedEscReadAddress(const EscBootInfo& info) {
+    if (info.protocolVersion >= 2) {
+        return 0x0021;  // ADDRESS_MAGIC_FILE_NAME on newer bootloaders
+    }
+
+    const uint32_t absoluteReadAddress = info.absoluteEepromAddress - 32UL;
+    return (uint16_t)(absoluteReadAddress >> info.addressShift);
+}
+
+void prepareEscDirectSession() {
+    cancelRamp();
+    writeThrottlePercent(0.0f);
+    flushEscTelemetryRx();
+    escSerial.end();
+    ledcDetachPin(ESC_PWM_PIN);
+    pinMode(ESC_PWM_PIN, INPUT_PULLUP);
+    delay(20);
+    initEscSerial();
+    flushEscSerialRx();
+}
+
+void restoreEscCliSession() {
+    deinitEscSerial();
+    beginMotorControl();
+    beginEscTelemetry();
+}
+
+void resetEscAfterDebugRead() {
+    uint8_t resetCmd[4] = {0x00, 0x00, 0x00, 0x00};
+    Serial.println("Resetting ESC back out of bootloader...");
+    printHexBuffer("TX reset", resetCmd, sizeof(resetCmd));
+    sendEsc(resetCmd, sizeof(resetCmd), false);
+    delay(50);
+
+    uint8_t resetRx[16] = {0};
+    uint16_t resetRxSize = getEsc(resetRx, 50);
+    printHexBuffer("RX reset", resetRx, resetRxSize);
+    delay(250);
 }
 
 void initEscSerial() {
@@ -488,4 +670,204 @@ void runEscPassthroughMode() {
     while (true) {
         processSerialPassthrough();
     }
+}
+
+void readEscParametersDebug() {
+    bool shouldResetEsc = false;
+
+    Serial.println();
+    Serial.println("ESC params: starting temporary passthrough read.");
+    Serial.println("Using AM32 flow: boot init -> set address (eeprom_address - 32) -> read 80 bytes.");
+    Serial.println("Holding the signal line idle and waiting for the ESC to fall back into its bootloader window...");
+
+    prepareEscDirectSession();
+
+    uint8_t bootInit[] = {0, 0, 0, 0, 0, 0, 0, 0, 0x0D, 'B', 'L', 'H', 'e', 'l', 'i', 0xF4, 0x7D};
+    uint8_t bootRx[64] = {0};
+    uint8_t setAddressCmd[4] = {0};
+    uint8_t setAddressRx[32] = {0};
+    uint8_t readCmd[2] = {CMD_READ_FLASH_SIL, ESC_PARAM_READ_SIZE};
+    uint8_t readRx[ESC_PARAM_READ_SIZE + 48] = {0};
+
+    do {
+        uint16_t bootRxSize = 0;
+        const unsigned long searchStartMs = millis();
+        unsigned long nextAttemptMs = searchStartMs + 1800;
+        uint8_t attempt = 0;
+
+        while ((millis() - searchStartMs) < 4000) {
+            const unsigned long now = millis();
+            if ((long)(now - nextAttemptMs) < 0) {
+                delay(20);
+                continue;
+            }
+
+            attempt++;
+            Serial.print("Bootloader probe attempt ");
+            Serial.print(attempt);
+            Serial.print(" at +");
+            Serial.print(now - searchStartMs);
+            Serial.println(" ms");
+            printHexBuffer("TX boot init", bootInit, sizeof(bootInit));
+
+            flushEscSerialRx();
+            sendEsc(bootInit, sizeof(bootInit), false);
+            delay(50);
+
+            bootRxSize = getEsc(bootRx, 200);
+            if (bootRxSize > 0) {
+                printHexBuffer("RX boot init", bootRx, bootRxSize);
+            } else {
+                Serial.println("RX boot init: no bytes");
+            }
+
+            if (bootRxSize > 0) {
+                break;
+            }
+
+            nextAttemptMs = now + 150;
+        }
+
+        if (bootRxSize == 0) {
+            Serial.println("ESC params: no bootloader response after retry window.");
+            Serial.println("Hint: this usually means the ESC never entered the AM32 bootloader.");
+            Serial.println("Try powering the ESC first, then run `esc params`, or rerun immediately after an ESC power-cycle.");
+            break;
+        }
+
+        if (bootRxSize >= 4) {
+            printAsciiPreview("Boot header", bootRx, 4);
+        }
+
+        if (bootRx[bootRxSize - 1] == BR_SUCCESS) {
+            shouldResetEsc = true;
+        }
+
+        EscBootInfo bootInfo;
+        if (!parseEscBootInfo(bootRx, bootRxSize, bootInfo)) {
+            Serial.println("ESC params: bootloader reply did not match a known AM32 device signature.");
+            break;
+        }
+
+        Serial.print("Detected ESC target: ");
+        Serial.println(bootInfo.deviceName);
+        Serial.print("  pinCode=0x");
+        printHexByte(bootInfo.pinCode);
+        Serial.print("  flashSizeCode=0x");
+        printHexByte(bootInfo.flashSizeCode);
+        Serial.print("  protocolVersion=");
+        Serial.print(bootInfo.protocolVersion);
+        Serial.print("  info5=0x");
+        printHexByte(bootInfo.infoByte5);
+        Serial.print("  info6=0x");
+        printHexByte(bootInfo.infoByte6);
+        Serial.println();
+        Serial.print("Resolved EEPROM address: encoded=0x");
+        Serial.print(bootInfo.encodedEepromAddress, HEX);
+        Serial.print(" absolute=0x");
+        Serial.println(bootInfo.absoluteEepromAddress, HEX);
+
+        const uint16_t readAddress = getEncodedEscReadAddress(bootInfo);
+        const uint32_t absoluteReadAddress = bootInfo.absoluteEepromAddress - 32UL;
+        Serial.print("Read start address: encoded=0x");
+        Serial.print(readAddress, HEX);
+        Serial.print(" absolute=0x");
+        Serial.println(absoluteReadAddress, HEX);
+        setAddressCmd[0] = CMD_SET_ADDRESS;
+        setAddressCmd[1] = 0x00;
+        setAddressCmd[2] = (uint8_t)(readAddress >> 8);
+        setAddressCmd[3] = (uint8_t)(readAddress & 0xFF);
+
+        printHexBuffer("TX set address", setAddressCmd, sizeof(setAddressCmd));
+        sendEsc(setAddressCmd, sizeof(setAddressCmd));
+        delay(5);
+
+        uint16_t setAddressRxSize = getEsc(setAddressRx, 200);
+        printHexBuffer("RX set address", setAddressRx, setAddressRxSize);
+        if (setAddressRxSize == 0 || setAddressRx[0] != BR_SUCCESS) {
+            Serial.println("ESC params: set-address command failed.");
+            break;
+        }
+
+        printHexBuffer("TX read block", readCmd, sizeof(readCmd));
+        sendEsc(readCmd, sizeof(readCmd));
+        delay(ESC_PARAM_READ_SIZE);
+
+        uint16_t readRxSize = getEsc(readRx, 500);
+        printHexBuffer("RX read block (raw)", readRx, readRxSize);
+        if (readRxSize == 0) {
+            Serial.println("ESC params: read command returned no data.");
+            break;
+        }
+
+        const uint16_t normalizedReadRxSize = trimReadResponsePrefix(readRx, readRxSize, ESC_PARAM_READ_SIZE);
+        if (normalizedReadRxSize != readRxSize) {
+            Serial.print("Normalized read response by trimming ");
+            Serial.print(readRxSize - normalizedReadRxSize);
+            Serial.println(" leading bytes.");
+            printHexBuffer("RX read block (normalized)", readRx, normalizedReadRxSize);
+        }
+
+        if (normalizedReadRxSize < (ESC_PARAM_READ_SIZE + 3)) {
+            Serial.println("ESC params: read response was shorter than expected.");
+            break;
+        }
+
+        if (readRx[normalizedReadRxSize - 1] != BR_SUCCESS) {
+            Serial.println("ESC params: read response did not end with bootloader ACK 0x30.");
+            break;
+        }
+
+        const uint16_t payloadPlusCrcLength = normalizedReadRxSize - 1;
+        const bool crcOk = checkEscResponseCrc(readRx, payloadPlusCrcLength);
+        Serial.print("Read CRC check: ");
+        Serial.println(crcOk ? "OK" : "FAILED");
+        if (!crcOk) {
+            break;
+        }
+
+        const uint16_t payloadLength = payloadPlusCrcLength - 2;
+        Serial.print("Read payload bytes: ");
+        Serial.println(payloadLength);
+        if (payloadLength < ESC_PARAM_READ_SIZE) {
+            Serial.println("ESC params: payload shorter than requested 80 bytes.");
+            break;
+        }
+
+        printAsciiPreview("Firmware name preview", readRx, 15);
+        printHexBuffer("EEPROM payload[0..47]", readRx + 32, 48);
+
+        const uint8_t* eeprom = readRx + 32;
+        Serial.println("Basic parameter check:");
+        Serial.print("  eeprom_marker=0x");
+        printHexByte(eeprom[0]);
+        Serial.print("  eeprom_version=");
+        Serial.print(eeprom[1]);
+        Serial.print("  bootloader_version_byte=");
+        Serial.print(eeprom[2]);
+        Serial.print("  fw=");
+        Serial.print(eeprom[3]);
+        Serial.print('.');
+        Serial.println(eeprom[4]);
+
+        if (eeprom[1] >= 3) {
+            Serial.print("  max_roc raw=");
+            Serial.print(eeprom[5]);
+            Serial.print(" interpreted=");
+            Serial.print(eeprom[5] / 10.0f, 1);
+            Serial.println(" (modern AM32 layout)");
+        } else {
+            Serial.println("  legacy EEPROM layout detected; modern field offsets are not reliable here.");
+            printAsciiPreview("  legacy bytes[5..19] ascii", eeprom + 5, 15);
+        }
+
+        Serial.println("ESC params: read completed.");
+    } while (false);
+
+    if (shouldResetEsc) {
+        resetEscAfterDebugRead();
+    }
+
+    restoreEscCliSession();
+    Serial.println("ESC params: passthrough session closed.");
 }

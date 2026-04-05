@@ -17,3 +17,4 @@ void rampToFullPower();
 void requestEscPassthroughModeAndRestart();
 bool consumeEscPassthroughRequest();
 void runEscPassthroughMode();
+void readEscParametersDebug();

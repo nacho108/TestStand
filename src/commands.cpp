@@ -64,6 +64,7 @@ void printHelp() {
     Serial.println("  test get <filename>          -> print a saved test CSV file");
     Serial.println("  test remove <filename>       -> delete a saved test CSV file");
     Serial.println("  pass                         -> reboot into ESC passthrough mode");
+    Serial.println("  esc params                   -> read one AM32 ESC parameter with debug output");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
     Serial.println("  telemetry on                 -> start periodic telemetry output");
@@ -161,6 +162,11 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("pass") || cmd.equalsIgnoreCase("passthrough")) {
         requestEscPassthroughModeAndRestart();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("esc params")) {
+        readEscParametersDebug();
         return;
     }
 
