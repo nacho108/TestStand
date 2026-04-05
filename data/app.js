@@ -1,5 +1,6 @@
 window.addEventListener("load", () => {
   const ui = {
+    viewTitle: document.getElementById("view-title"),
     voltage: document.getElementById("voltage-value"),
     current: document.getElementById("current-value"),
     power: document.getElementById("power-value"),
@@ -17,6 +18,9 @@ window.addEventListener("load", () => {
     motorTempHealth: document.getElementById("motor-temp-health"),
     ambientTempHealth: document.getElementById("ambient-temp-health")
   };
+
+  const links = Array.from(document.querySelectorAll("[data-view-link]"));
+  const panes = Array.from(document.querySelectorAll("[data-view-pane]"));
 
   const setText = (element, value) => {
     if (element) {
@@ -37,6 +41,30 @@ window.addEventListener("load", () => {
     }
     element.textContent = text;
   };
+
+  const setView = (view) => {
+    links.forEach((link) => {
+      link.classList.toggle("sidebar__nav-link--active", link.dataset.viewLink === view);
+    });
+
+    panes.forEach((pane) => {
+      pane.hidden = pane.dataset.viewPane !== view;
+    });
+
+    if (ui.viewTitle) {
+      ui.viewTitle.textContent = view === "testing" ? "Testing" : "Live overview";
+    }
+  };
+
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const { viewLink } = link.dataset;
+      if (viewLink) {
+        setView(viewLink);
+      }
+    });
+  });
 
   const formatNumber = (value, unit, digits = 2) => {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
@@ -114,6 +142,7 @@ window.addEventListener("load", () => {
   let socket = null;
   let reconnectTimer = null;
 
+  setView("overview");
   applyDisconnectedState();
 
   const scheduleReconnect = () => {

@@ -18,14 +18,22 @@
       </div>
 
       <nav class="sidebar__nav" aria-label="Dashboard sections">
-        <a class="sidebar__nav-link sidebar__nav-link--active" href="#overview">
+        <a class="sidebar__nav-link sidebar__nav-link--active" href="#overview" data-view-link="overview">
           <span class="nav-icon" aria-hidden="true"></span>
           <span>Live overview</span>
+        </a>
+        <a class="sidebar__nav-link" href="#testing" data-view-link="testing">
+          <span class="nav-icon" aria-hidden="true"></span>
+          <span>Testing</span>
         </a>
       </nav>
     </aside>
 
     <main class="workspace">
+      <section class="view-header">
+        <h2 id="view-title">Live overview</h2>
+      </section>
+
       <section class="group-grid" id="overview">
         <article class="group-card group-card--mechanical">
           <div class="group-card__header">
@@ -112,6 +120,50 @@
               </div>
               <span class="metric-row__health" id="ambient-temp-health">Waiting for IR sensor</span>
             </article>
+          </div>
+        </article>
+      </section>
+
+      <section class="testing-extras" data-view-pane="testing" hidden>
+        <div class="test-actions">
+          <button class="test-button" type="button">Start test</button>
+        </div>
+
+        <article class="chart-card">
+          <div class="chart-card__header">
+            <h3>Test curves</h3>
+          </div>
+          <div class="chart-card__legend">
+            <span class="legend-thrust">Thrust</span>
+            <span class="legend-power">Power</span>
+            <span class="legend-rpm">RPM</span>
+            <span class="legend-temp">Temperature</span>
+          </div>
+          <div class="chart-plot" aria-hidden="true">
+            <div class="chart-plot__grid"></div>
+            <div class="chart-plot__axis chart-plot__axis--y"></div>
+            <div class="chart-plot__axis chart-plot__axis--x"></div>
+            <span class="chart-plot__ylabel">Thrust / Power / RPM / Temp</span>
+            <span class="chart-plot__xlabel">Throttle</span>
+            <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
+            </svg>
+            <svg class="chart-line chart-line--power" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M0,96 C12,92 24,85 40,74 S72,48 100,28"></path>
+            </svg>
+            <svg class="chart-line chart-line--rpm" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M0,92 C18,85 30,72 48,58 S74,32 100,10"></path>
+            </svg>
+            <svg class="chart-line chart-line--temp" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path d="M0,98 C20,97 34,90 52,78 S78,50 100,34"></path>
+            </svg>
+            <div class="chart-ticks">
+              <span>0%</span>
+              <span>25%</span>
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
           </div>
         </article>
       </section>
