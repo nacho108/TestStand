@@ -19,3 +19,4 @@ bool consumeEscPassthroughRequest();
 void runEscPassthroughMode();
 void readEscParametersDebug();
 void dumpEscEepromDebug();
+void toggleEscDirectionReverseDebug();

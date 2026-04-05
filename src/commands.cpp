@@ -66,6 +66,7 @@ void printHelp() {
     Serial.println("  pass                         -> reboot into ESC passthrough mode");
     Serial.println("  esc params                   -> read one AM32 ESC parameter with debug output");
     Serial.println("  esc dump                     -> read and print the full AM32 EEPROM region");
+    Serial.println("  esc reverse                  -> toggle the AM32 dir_reversed parameter");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
     Serial.println("  telemetry on                 -> start periodic telemetry output");
@@ -173,6 +174,11 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("esc dump")) {
         dumpEscEepromDebug();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("esc reverse")) {
+        toggleEscDirectionReverseDebug();
         return;
     }
 

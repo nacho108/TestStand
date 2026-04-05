@@ -78,8 +78,10 @@ constexpr uint8_t ESC_PARAM_READ_SIZE = 48 + 32;
 constexpr uint16_t ESC_EEPROM_REGION_SIZE = 1024;
 constexpr uint8_t ESC_EEPROM_DUMP_CHUNK_SIZE = 64;
 constexpr uint8_t ESC_EEPROM_SUMMARY_SIZE = 48;
+constexpr uint8_t ESC_LEGACY_EEPROM_WRITE_SIZE = 176;
 constexpr uint8_t ESC_LEGACY_NAME_OFFSET = 5;
 constexpr uint8_t ESC_LEGACY_NAME_LENGTH = 12;
+constexpr uint8_t ESC_LEGACY_DIR_REVERSED_OFFSET = 17;
 
 struct EscBootInfo {
     uint8_t pinCode = 0;
@@ -667,6 +669,101 @@ bool readEscFlashBlock(uint16_t encodedAddress,
     return true;
 }
 
+bool writeEscFlashBlock(uint16_t encodedAddress,
+                        const uint8_t* payload,
+                        uint16_t payloadLength,
+                        bool verbose) {
+    if (payloadLength == 0 || payloadLength > 256) {
+        Serial.println("ESC debug: write payload length must be 1..256 bytes.");
+        return false;
+    }
+
+    uint8_t setAddressCmd[4] = {
+        CMD_SET_ADDRESS,
+        0x00,
+        (uint8_t)(encodedAddress >> 8),
+        (uint8_t)(encodedAddress & 0xFF)
+    };
+    uint8_t setAddressRx[32] = {0};
+    uint8_t setBufferCmd[4] = {
+        CMD_SET_BUFFER,
+        0x00,
+        static_cast<uint8_t>((payloadLength == 256) ? 0x01 : 0x00),
+        (uint8_t)(payloadLength & 0xFF)
+    };
+    uint8_t setBufferRx[32] = {0};
+    uint8_t progCmd[2] = {CMD_PROG_FLASH, 0x01};
+    uint8_t progRx[32] = {0};
+
+    if (verbose) {
+        printHexBuffer("TX set address", setAddressCmd, sizeof(setAddressCmd));
+    }
+    flushEscSerialRx();
+    sendEsc(setAddressCmd, sizeof(setAddressCmd), true);
+    delay(5);
+
+    uint16_t setAddressRxSize = getEsc(setAddressRx, 200);
+    if (verbose) {
+        printHexBuffer("RX set address", setAddressRx, setAddressRxSize);
+    }
+    if (setAddressRxSize == 0 || setAddressRx[0] != BR_SUCCESS) {
+        Serial.println("ESC debug: set-address command failed before write.");
+        return false;
+    }
+
+    if (verbose) {
+        printHexBuffer("TX set buffer", setBufferCmd, sizeof(setBufferCmd));
+    }
+    flushEscSerialRx();
+    sendEsc(setBufferCmd, sizeof(setBufferCmd), true);
+    delay(5);
+
+    setBufferRx[0] = 0;
+    uint16_t setBufferRxSize = getEsc(setBufferRx, 30);
+    if (verbose && setBufferRxSize > 0) {
+        printHexBuffer("RX set buffer", setBufferRx, setBufferRxSize);
+    }
+    if (setBufferRxSize > 0 && setBufferRx[0] != BR_SUCCESS) {
+        Serial.println("ESC debug: unexpected response to set-buffer command.");
+        return false;
+    }
+
+    if (verbose) {
+        printHexBuffer("TX buffer payload", payload, payloadLength);
+    }
+    flushEscSerialRx();
+    sendEsc(const_cast<uint8_t*>(payload), payloadLength, true);
+    delay(10);
+
+    uint8_t payloadAck[32] = {0};
+    uint16_t payloadAckSize = getEsc(payloadAck, 200);
+    if (verbose) {
+        printHexBuffer("RX buffer payload ack", payloadAck, payloadAckSize);
+    }
+    if (payloadAckSize == 0 || payloadAck[0] != BR_SUCCESS) {
+        Serial.println("ESC debug: payload upload was not acknowledged.");
+        return false;
+    }
+
+    if (verbose) {
+        printHexBuffer("TX program flash", progCmd, sizeof(progCmd));
+    }
+    flushEscSerialRx();
+    sendEsc(progCmd, sizeof(progCmd), true);
+    delay(80);
+
+    uint16_t progRxSize = getEsc(progRx, 500);
+    if (verbose) {
+        printHexBuffer("RX program flash", progRx, progRxSize);
+    }
+    if (progRxSize == 0 || progRx[0] != BR_SUCCESS) {
+        Serial.println("ESC debug: flash program command failed.");
+        return false;
+    }
+
+    return true;
+}
+
 void prepareEscDirectSession() {
     cancelRamp();
     writeThrottlePercent(0.0f);
@@ -1234,4 +1331,103 @@ void dumpEscEepromDebug() {
 
     restoreEscCliSession();
     Serial.println("ESC dump: passthrough session closed.");
+}
+
+void toggleEscDirectionReverseDebug() {
+    bool shouldResetEsc = false;
+
+    Serial.println();
+    Serial.println("ESC reverse: starting dir_reversed toggle.");
+    Serial.println("Reading the legacy EEPROM block, flipping byte 17, writing it back, then verifying.");
+
+    EscBootInfo bootInfo;
+    uint8_t eepromData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+
+    do {
+        if (!beginEscDebugSession(bootInfo, shouldResetEsc)) {
+            break;
+        }
+
+        uint16_t payloadLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               eepromData,
+                               sizeof(eepromData),
+                               payloadLength,
+                               true)) {
+            break;
+        }
+
+        if (payloadLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.print("ESC reverse: expected ");
+            Serial.print(ESC_LEGACY_EEPROM_WRITE_SIZE);
+            Serial.print(" EEPROM bytes but got ");
+            Serial.println(payloadLength);
+            break;
+        }
+
+        Serial.println("EEPROM summary before write:");
+        printEscEepromSummary(eepromData, payloadLength);
+
+        if (eepromData[1] >= 3) {
+            Serial.println("ESC reverse: refusing to write modern EEPROM layouts until their write path is mapped.");
+            break;
+        }
+
+        const uint8_t oldRaw = eepromData[ESC_LEGACY_DIR_REVERSED_OFFSET];
+        const uint8_t newRaw = (oldRaw == 0x01) ? 0x00 : 0x01;
+
+        Serial.print("dir_reversed raw before write: ");
+        Serial.println(oldRaw);
+        Serial.print("dir_reversed raw after write: ");
+        Serial.println(newRaw);
+
+        eepromData[ESC_LEGACY_DIR_REVERSED_OFFSET] = newRaw;
+
+        if (!writeEscFlashBlock(bootInfo.encodedEepromAddress,
+                                eepromData,
+                                ESC_LEGACY_EEPROM_WRITE_SIZE,
+                                true)) {
+            break;
+        }
+
+        uint8_t verifyData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+        uint16_t verifyLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               verifyData,
+                               sizeof(verifyData),
+                               verifyLength,
+                               true)) {
+            Serial.println("ESC reverse: write completed, but read-back verification failed.");
+            break;
+        }
+
+        if (verifyLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.println("ESC reverse: verification read length was unexpected.");
+            break;
+        }
+
+        Serial.println("EEPROM summary after write:");
+        printEscEepromSummary(verifyData, verifyLength);
+
+        const uint8_t verifyRaw = verifyData[ESC_LEGACY_DIR_REVERSED_OFFSET];
+        if (verifyRaw != newRaw) {
+            Serial.print("ESC reverse: verification mismatch, expected raw=");
+            Serial.print(newRaw);
+            Serial.print(" but read back ");
+            Serial.println(verifyRaw);
+            break;
+        }
+
+        Serial.print("ESC reverse: dir_reversed toggled successfully to ");
+        Serial.println(verifyRaw == 0x01 ? "true" : "false");
+    } while (false);
+
+    if (shouldResetEsc) {
+        resetEscAfterDebugRead();
+    }
+
+    restoreEscCliSession();
+    Serial.println("ESC reverse: passthrough session closed.");
 }
