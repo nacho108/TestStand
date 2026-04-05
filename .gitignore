@@ -25,6 +25,7 @@
 # Build artifacts
 build/
 dist/
+preview/
 
 # OS junk
 .DS_Store
