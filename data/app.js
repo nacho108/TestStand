@@ -1,27 +1,41 @@
 window.addEventListener("load", () => {
-  const body = document.body;
   const ui = {
-    hostingStatus: document.getElementById("hosting-status"),
-    apiStatus: document.getElementById("api-status"),
-    lastRefresh: document.getElementById("last-refresh"),
-    telemetryHealth: document.getElementById("telemetry-health"),
-    telemetrySummary: document.getElementById("telemetry-summary"),
-    refreshState: document.getElementById("refresh-state"),
-    timestampValue: document.getElementById("timestamp-value"),
     voltage: document.getElementById("voltage-value"),
     current: document.getElementById("current-value"),
     power: document.getElementById("power-value"),
     rpm: document.getElementById("rpm-value"),
     escTemp: document.getElementById("esc-temp-value"),
-    irAmbient: document.getElementById("ir-ambient-value"),
-    irObject: document.getElementById("ir-object-value"),
-    thrust: document.getElementById("thrust-value")
+    motorTemp: document.getElementById("ir-object-value"),
+    ambientTemp: document.getElementById("ir-ambient-value"),
+    thrust: document.getElementById("thrust-value"),
+    voltageHealth: document.getElementById("voltage-health"),
+    currentHealth: document.getElementById("current-health"),
+    powerHealth: document.getElementById("power-health"),
+    rpmHealth: document.getElementById("rpm-health"),
+    thrustHealth: document.getElementById("thrust-health"),
+    escTempHealth: document.getElementById("esc-temp-health"),
+    motorTempHealth: document.getElementById("motor-temp-health"),
+    ambientTempHealth: document.getElementById("ambient-temp-health")
   };
 
   const setText = (element, value) => {
     if (element) {
       element.textContent = value;
     }
+  };
+
+  const setHealth = (element, text, state = "ok") => {
+    if (!element) {
+      return;
+    }
+
+    element.classList.remove("metric-row__health--warn", "metric-row__health--error");
+    if (state === "warn") {
+      element.classList.add("metric-row__health--warn");
+    } else if (state === "error") {
+      element.classList.add("metric-row__health--error");
+    }
+    element.textContent = text;
   };
 
   const formatNumber = (value, unit, digits = 2) => {
@@ -40,55 +54,67 @@ window.addEventListener("load", () => {
     return `${Math.round(Number(value))} ${unit}`;
   };
 
-  const updateHealth = (isOk, summary) => {
-    body.classList.toggle("status-ok", isOk);
-    body.classList.toggle("status-error", !isOk);
-    setText(ui.telemetrySummary, summary);
+  const applyDisconnectedState = () => {
+    setHealth(ui.voltageHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.currentHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.powerHealth, "Waiting for live feed", "error");
+    setHealth(ui.rpmHealth, "Waiting for telemetry", "error");
+    setHealth(ui.escTempHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.thrustHealth, "Waiting for scale", "warn");
+    setHealth(ui.motorTempHealth, "Waiting for IR sensor", "warn");
+    setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
   };
 
-  let socket = null;
-  let reconnectTimer = null;
-
-  setText(ui.hostingStatus, "Dashboard ready");
-  setText(ui.refreshState, "Connecting to live updates");
-  updateHealth(false, "Metrics will update automatically once the WebSocket connects.");
-
   const applyStatus = (data) => {
-    const now = new Date();
     const hasTelemetry = Boolean(data.telemetry_valid);
-    const sensorSummary = [
-      data.ir_detected ? "IR ready" : "IR offline",
-      data.scale_detected ? (data.scale_valid ? "scale ready" : "scale waiting") : "scale offline"
-    ].join(", ");
-
-    setText(ui.apiStatus, hasTelemetry ? "Live status OK" : "Connected, waiting");
-    setText(ui.lastRefresh, now.toLocaleTimeString());
-    setText(ui.telemetryHealth, hasTelemetry ? "Telemetry streaming" : "Awaiting telemetry");
-    setText(
-      ui.refreshState,
-      hasTelemetry ? "WebSocket live at 4 Hz" : "WebSocket connected, no ESC frame yet"
-    );
-    setText(
-      ui.timestampValue,
-      `Device uptime ${formatInteger(data.timestamp_ms / 1000, "s")}`
-    );
-
-    updateHealth(
-      true,
-      hasTelemetry
-        ? `Telemetry is live with ${sensorSummary}.`
-        : `WebSocket is connected. ${sensorSummary}.`
-    );
+    const hasIr = Boolean(data.ir_detected);
+    const hasScale = Boolean(data.scale_detected);
+    const scaleReady = hasScale && Boolean(data.scale_valid);
 
     setText(ui.voltage, formatNumber(data.voltage_v, "V", 3));
     setText(ui.current, formatNumber(data.current_a, "A", 3));
     setText(ui.power, formatNumber(data.power_w, "W", 2));
     setText(ui.rpm, formatInteger(data.rpm, "rpm"));
     setText(ui.escTemp, formatNumber(data.esc_temperature_c, "deg C", 1));
-    setText(ui.irAmbient, formatNumber(data.ir_ambient_c, "deg C", 1));
-    setText(ui.irObject, formatNumber(data.ir_object_c, "deg C", 1));
+    setText(ui.motorTemp, formatNumber(data.ir_object_c, "deg C", 1));
+    setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
+
+    if (hasTelemetry) {
+      setHealth(ui.voltageHealth, "ESC telemetry healthy");
+      setHealth(ui.currentHealth, "Current sensor healthy");
+      setHealth(ui.powerHealth, "Computed from live feed");
+      setHealth(ui.rpmHealth, "RPM telemetry healthy");
+      setHealth(ui.escTempHealth, "ESC thermal sensor healthy");
+    } else {
+      setHealth(ui.voltageHealth, "Awaiting ESC telemetry", "warn");
+      setHealth(ui.currentHealth, "Awaiting ESC telemetry", "warn");
+      setHealth(ui.powerHealth, "Waiting for live feed", "warn");
+      setHealth(ui.rpmHealth, "Awaiting ESC telemetry", "warn");
+      setHealth(ui.escTempHealth, "Awaiting ESC telemetry", "warn");
+    }
+
+    if (scaleReady) {
+      setHealth(ui.thrustHealth, "Load cell healthy");
+    } else if (hasScale) {
+      setHealth(ui.thrustHealth, "Scale stabilizing", "warn");
+    } else {
+      setHealth(ui.thrustHealth, "Scale offline", "error");
+    }
+
+    if (hasIr) {
+      setHealth(ui.motorTempHealth, "IR target healthy");
+      setHealth(ui.ambientTempHealth, "Ambient sensor healthy");
+    } else {
+      setHealth(ui.motorTempHealth, "IR sensor offline", "error");
+      setHealth(ui.ambientTempHealth, "IR sensor offline", "error");
+    }
   };
+
+  let socket = null;
+  let reconnectTimer = null;
+
+  applyDisconnectedState();
 
   const scheduleReconnect = () => {
     if (reconnectTimer !== null) {
@@ -110,29 +136,20 @@ window.addEventListener("load", () => {
     socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     socket.addEventListener("open", () => {
-      setText(ui.apiStatus, "WebSocket connected");
-      setText(ui.refreshState, "Waiting for live data");
-      setText(ui.lastRefresh, "Connected");
-      updateHealth(false, "WebSocket connected. Waiting for the first telemetry frame.");
+      applyDisconnectedState();
+      setHealth(ui.powerHealth, "WebSocket connected");
     });
 
     socket.addEventListener("message", (event) => {
       try {
         applyStatus(JSON.parse(event.data));
       } catch (error) {
-        setText(ui.apiStatus, "Invalid update");
-        setText(ui.refreshState, "Malformed WebSocket payload");
-        updateHealth(false, "The device sent a WebSocket message that could not be parsed.");
+        setHealth(ui.powerHealth, "Malformed live payload", "error");
       }
     });
 
     socket.addEventListener("close", () => {
-      setText(ui.apiStatus, "Disconnected");
-      setText(ui.lastRefresh, "Reconnecting...");
-      setText(ui.telemetryHealth, "Connection issue");
-      setText(ui.refreshState, "Retrying WebSocket");
-      setText(ui.timestampValue, "Waiting for device timestamp");
-      updateHealth(false, "The live update channel disconnected. Check the ESP32 AP and web server.");
+      applyDisconnectedState();
       scheduleReconnect();
     });
 

@@ -7,132 +7,113 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="app-shell">
+  <div class="dashboard-shell">
     <aside class="sidebar">
-      <div class="sidebar__brand">
-        <p class="eyebrow">ESP32 Test Stand</p>
-        <h1>Live dashboard</h1>
-        <p class="sidebar__copy">
-          Monitor telemetry, sensors, and access point health from the built-in web UI.
-        </p>
+      <div class="sidebar__top">
+        <div class="brand-mark" aria-hidden="true">TS</div>
+        <div class="brand-copy">
+          <p class="brand-copy__eyebrow">ESP32</p>
+          <h1>TestStand</h1>
+        </div>
       </div>
 
       <nav class="sidebar__nav" aria-label="Dashboard sections">
-        <a href="#overview">Overview</a>
-        <a href="#telemetry">Telemetry</a>
-        <a href="#sensors">Sensors</a>
+        <a class="sidebar__nav-link sidebar__nav-link--active" href="#overview">
+          <span class="nav-icon" aria-hidden="true"></span>
+          <span>Live overview</span>
+        </a>
       </nav>
-
-      <section class="sidebar__panel">
-        <div class="panel-heading">
-          <span class="panel-heading__eyebrow">Connection</span>
-          <strong id="hosting-status">Loading UI...</strong>
-        </div>
-        <dl class="info-list">
-          <div>
-            <dt>Access point</dt>
-            <dd>TestStand-ESP32</dd>
-          </div>
-          <div>
-            <dt>Open</dt>
-            <dd>http://192.168.4.1</dd>
-          </div>
-          <div>
-            <dt>API</dt>
-            <dd id="api-status">Waiting for status</dd>
-          </div>
-          <div>
-            <dt>Last refresh</dt>
-            <dd id="last-refresh">Never</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section class="sidebar__panel sidebar__panel--highlight">
-        <span class="panel-heading__eyebrow">Health</span>
-        <strong id="telemetry-health">No telemetry yet</strong>
-        <p id="telemetry-summary">Metrics will update automatically once `/api/status` responds.</p>
-      </section>
     </aside>
 
-    <main class="content">
-      <section class="hero-card" id="overview">
-        <div>
-          <p class="eyebrow">Overview</p>
-          <h2>Realtime bench metrics</h2>
-          <p class="hero-card__copy">
-            The dashboard refreshes once per second and adapts from a wide desktop layout to a compact phone view.
-          </p>
-        </div>
-        <div class="hero-card__pulse">
-          <span class="pulse-dot" aria-hidden="true"></span>
-          <div>
-            <strong id="refresh-state">Polling every 1s</strong>
-            <p id="timestamp-value">Waiting for device timestamp</p>
+    <main class="workspace">
+      <section class="group-grid" id="overview">
+        <article class="group-card group-card--mechanical">
+          <div class="group-card__header">
+            <h2>Mechanical</h2>
           </div>
-        </div>
-      </section>
 
-      <section class="metrics-section" id="telemetry">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Telemetry</p>
-            <h2>Drive metrics</h2>
-          </div>
-        </div>
-        <div class="metrics-grid">
-          <article class="metric-card metric-card--accent">
-            <span class="metric-card__label">Voltage</span>
-            <strong class="metric-card__value" id="voltage-value">--</strong>
-            <p class="metric-card__meta">ESC input voltage</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">Current</span>
-            <strong class="metric-card__value" id="current-value">--</strong>
-            <p class="metric-card__meta">Calibrated current draw</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">Power</span>
-            <strong class="metric-card__value" id="power-value">--</strong>
-            <p class="metric-card__meta">Calculated electrical power</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">RPM</span>
-            <strong class="metric-card__value" id="rpm-value">--</strong>
-            <p class="metric-card__meta">Estimated mechanical speed</p>
-          </article>
-        </div>
-      </section>
+          <div class="group-card__stack">
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">RPM</span>
+                <strong class="metric-row__value" id="rpm-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="rpm-health">Waiting for telemetry</span>
+            </article>
 
-      <section class="metrics-section" id="sensors">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Sensors</p>
-            <h2>Thermal and load data</h2>
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Thrust</span>
+                <strong class="metric-row__value" id="thrust-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="thrust-health">Waiting for scale</span>
+            </article>
           </div>
-        </div>
-        <div class="metrics-grid metrics-grid--secondary">
-          <article class="metric-card">
-            <span class="metric-card__label">ESC Temp</span>
-            <strong class="metric-card__value" id="esc-temp-value">--</strong>
-            <p class="metric-card__meta">Reported by ESC telemetry</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">IR Ambient</span>
-            <strong class="metric-card__value" id="ir-ambient-value">--</strong>
-            <p class="metric-card__meta">Infrared ambient reading</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">IR Object</span>
-            <strong class="metric-card__value" id="ir-object-value">--</strong>
-            <p class="metric-card__meta">Infrared target temperature</p>
-          </article>
-          <article class="metric-card">
-            <span class="metric-card__label">Thrust</span>
-            <strong class="metric-card__value" id="thrust-value">--</strong>
-            <p class="metric-card__meta">Scale-derived thrust or weight</p>
-          </article>
-        </div>
+        </article>
+
+        <article class="group-card group-card--electrical">
+          <div class="group-card__header">
+            <h2>Electrical</h2>
+          </div>
+
+          <div class="group-card__stack">
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Voltage</span>
+                <strong class="metric-row__value" id="voltage-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="voltage-health">Waiting for ESC telemetry</span>
+            </article>
+
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Current</span>
+                <strong class="metric-row__value" id="current-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="current-health">Waiting for ESC telemetry</span>
+            </article>
+
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Power</span>
+                <strong class="metric-row__value" id="power-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="power-health">Calculated from live feed</span>
+            </article>
+          </div>
+        </article>
+
+        <article class="group-card group-card--temperatures">
+          <div class="group-card__header">
+            <h2>Temperatures</h2>
+          </div>
+
+          <div class="group-card__stack">
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">ESC Temp</span>
+                <strong class="metric-row__value" id="esc-temp-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="esc-temp-health">Waiting for ESC telemetry</span>
+            </article>
+
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Motor Temp</span>
+                <strong class="metric-row__value" id="ir-object-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="motor-temp-health">Waiting for IR sensor</span>
+            </article>
+
+            <article class="metric-row">
+              <div class="metric-row__top">
+                <span class="metric-row__label">Ambient Temp</span>
+                <strong class="metric-row__value" id="ir-ambient-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="ambient-temp-health">Waiting for IR sensor</span>
+            </article>
+          </div>
+        </article>
       </section>
     </main>
   </div>
