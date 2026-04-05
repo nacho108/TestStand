@@ -7,6 +7,7 @@
 #include "motor_control.h"
 #include "scale_manager.h"
 #include "test_runner.h"
+#include "web_server.h"
 
 namespace {
 
@@ -79,6 +80,8 @@ void printHelp() {
     Serial.println("  calibration reset");
     Serial.println("  ir status                    -> print MLX90614 status");
     Serial.println("  ir read                      -> read ambient and object temperatures");
+    Serial.println("  wifi select                  -> scan networks, choose by number, then enter password");
+    Serial.println("  wifi status                  -> print current Wi-Fi mode and connection");
     Serial.println("  help");
 }
 
@@ -91,6 +94,11 @@ void handleCommand(String cmd) {
 
     if (testSavePromptPending || testFilenamePromptPending) {
         handlePendingTestSaveCommand(cmd);
+        return;
+    }
+
+    if (wifiSelectionPending()) {
+        handleWifiSelectionInput(cmd);
         return;
     }
 
@@ -260,6 +268,16 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("ir read")) {
         printIrRead();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("wifi select")) {
+        beginWifiSelection();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("wifi status")) {
+        printWifiStatus();
         return;
     }
 
