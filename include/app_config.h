@@ -25,6 +25,7 @@ static constexpr int MOTOR_MAGNETS = 28;
 
 static constexpr int TEST_STEP_PERCENT = 5;
 static constexpr int TEST_MAX_RESULTS = 21;
+static constexpr unsigned long AVAILABLE_LED_BLINK_MS = 500;
 
 static constexpr const char* WEB_AP_SSID = "TestStand-ESP32";
 static constexpr const char* WEB_AP_PASSWORD = "teststand";

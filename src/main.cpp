@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 
+#include "app_config.h"
 #include "app_state.h"
 #include "calibration.h"
 #include "commands.h"
@@ -13,9 +14,36 @@
 #include "test_runner.h"
 #include "web_server.h"
 
+namespace {
+#ifndef LED_BUILTIN
+constexpr int AVAILABLE_LED_PIN = 2;
+#else
+constexpr int AVAILABLE_LED_PIN = LED_BUILTIN;
+#endif
+
+bool availableLedState = false;
+unsigned long lastAvailableLedToggle = 0;
+
+void beginAvailableLed() {
+    pinMode(AVAILABLE_LED_PIN, OUTPUT);
+    digitalWrite(AVAILABLE_LED_PIN, LOW);
+}
+
+void updateAvailableLed() {
+    if (millis() - lastAvailableLedToggle < AVAILABLE_LED_BLINK_MS) {
+        return;
+    }
+
+    lastAvailableLedToggle = millis();
+    availableLedState = !availableLedState;
+    digitalWrite(AVAILABLE_LED_PIN, availableLedState ? HIGH : LOW);
+}
+}  // namespace
+
 void setup() {
     Serial.begin(115200);
     delay(1000);
+    beginAvailableLed();
 
     if (consumeEscPassthroughRequest()) {
         runEscPassthroughMode();
@@ -70,6 +98,7 @@ void loop() {
     pollEscTelemetry();
     pollScale();
     updateWebServer();
+    updateAvailableLed();
 
     static unsigned long lastPrint = 0;
     if (!testRunning && telemetryStreaming && millis() - lastPrint >= 1000) {
