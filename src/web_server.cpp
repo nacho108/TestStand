@@ -26,29 +26,231 @@ bool apModeActive = false;
 
 constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 30000;
 constexpr int MAX_SCANNED_NETWORKS = 10;
+constexpr int MAX_SAVED_WIFI_NETWORKS = 8;
+constexpr const char* WIFI_PREF_NAMESPACE = "am32cli";
+constexpr const char* WIFI_PREF_COUNT_KEY = "wifi_count";
 String scannedSsids[MAX_SCANNED_NETWORKS];
 int scannedNetworkCount = 0;
 bool wifiSelectionIndexPending = false;
 bool wifiSelectionPasswordPending = false;
+bool wifiForgetIndexPending = false;
 String pendingWifiSsid;
-String configuredWifiSsid;
-String configuredWifiPassword;
+String savedWifiSsids[MAX_SAVED_WIFI_NETWORKS];
+String savedWifiPasswords[MAX_SAVED_WIFI_NETWORKS];
+int savedWifiCount = 0;
+int connectingWifiIndex = -1;
+
+void ensureScanCapableWifiMode();
+
+String makeWifiSsidKey(int index) {
+    return "wifi_ssid_" + String(index);
+}
+
+String makeWifiPasswordKey(int index) {
+    return "wifi_pass_" + String(index);
+}
+
+void clearSavedWifiCache() {
+    for (int i = 0; i < MAX_SAVED_WIFI_NETWORKS; ++i) {
+        savedWifiSsids[i] = "";
+        savedWifiPasswords[i] = "";
+    }
+    savedWifiCount = 0;
+}
 
 void loadWifiConfiguration() {
-    preferences.begin("am32cli", true);
-    configuredWifiSsid = preferences.getString("wifi_ssid", "");
-    configuredWifiPassword = preferences.getString("wifi_pass", "");
+    clearSavedWifiCache();
+
+    preferences.begin(WIFI_PREF_NAMESPACE, true);
+    int count = preferences.getInt(WIFI_PREF_COUNT_KEY, -1);
+
+    if (count < 0) {
+        String legacySsid = preferences.getString("wifi_ssid", "");
+        String legacyPassword = preferences.getString("wifi_pass", "");
+        if (legacySsid.length() > 0) {
+            savedWifiSsids[0] = legacySsid;
+            savedWifiPasswords[0] = legacyPassword;
+            savedWifiCount = 1;
+        }
+        preferences.end();
+        return;
+    }
+
+    count = constrain(count, 0, MAX_SAVED_WIFI_NETWORKS);
+    for (int i = 0; i < count; ++i) {
+        String ssid = preferences.getString(makeWifiSsidKey(i).c_str(), "");
+        String password = preferences.getString(makeWifiPasswordKey(i).c_str(), "");
+        if (ssid.length() == 0) {
+            continue;
+        }
+
+        savedWifiSsids[savedWifiCount] = ssid;
+        savedWifiPasswords[savedWifiCount] = password;
+        ++savedWifiCount;
+    }
+
+    preferences.end();
+}
+
+void persistWifiConfiguration() {
+    preferences.begin(WIFI_PREF_NAMESPACE, false);
+    preferences.putInt(WIFI_PREF_COUNT_KEY, savedWifiCount);
+    for (int i = 0; i < MAX_SAVED_WIFI_NETWORKS; ++i) {
+        const String ssidKey = makeWifiSsidKey(i);
+        const String passwordKey = makeWifiPasswordKey(i);
+        if (i < savedWifiCount) {
+            preferences.putString(ssidKey.c_str(), savedWifiSsids[i]);
+            preferences.putString(passwordKey.c_str(), savedWifiPasswords[i]);
+        } else {
+            preferences.remove(ssidKey.c_str());
+            preferences.remove(passwordKey.c_str());
+        }
+    }
+
+    preferences.remove("wifi_ssid");
+    preferences.remove("wifi_pass");
     preferences.end();
 }
 
 void saveWifiConfiguration(const String& ssid, const String& password) {
-    preferences.begin("am32cli", false);
-    preferences.putString("wifi_ssid", ssid);
-    preferences.putString("wifi_pass", password);
-    preferences.end();
+    int existingIndex = -1;
+    for (int i = 0; i < savedWifiCount; ++i) {
+        if (savedWifiSsids[i] == ssid) {
+            existingIndex = i;
+            break;
+        }
+    }
 
-    configuredWifiSsid = ssid;
-    configuredWifiPassword = password;
+    if (existingIndex >= 0) {
+        savedWifiPasswords[existingIndex] = password;
+
+        if (existingIndex > 0) {
+            String updatedSsid = savedWifiSsids[existingIndex];
+            String updatedPassword = savedWifiPasswords[existingIndex];
+            for (int i = existingIndex; i > 0; --i) {
+                savedWifiSsids[i] = savedWifiSsids[i - 1];
+                savedWifiPasswords[i] = savedWifiPasswords[i - 1];
+            }
+            savedWifiSsids[0] = updatedSsid;
+            savedWifiPasswords[0] = updatedPassword;
+        }
+    } else {
+        int insertIndex = savedWifiCount;
+        if (savedWifiCount < MAX_SAVED_WIFI_NETWORKS) {
+            ++savedWifiCount;
+        } else {
+            insertIndex = MAX_SAVED_WIFI_NETWORKS - 1;
+        }
+
+        for (int i = insertIndex; i > 0; --i) {
+            savedWifiSsids[i] = savedWifiSsids[i - 1];
+            savedWifiPasswords[i] = savedWifiPasswords[i - 1];
+        }
+
+        savedWifiSsids[0] = ssid;
+        savedWifiPasswords[0] = password;
+    }
+
+    persistWifiConfiguration();
+}
+
+bool removeSavedWifiByIndex(int index) {
+    if (index < 0 || index >= savedWifiCount) {
+        return false;
+    }
+
+    for (int i = index; i < savedWifiCount - 1; ++i) {
+        savedWifiSsids[i] = savedWifiSsids[i + 1];
+        savedWifiPasswords[i] = savedWifiPasswords[i + 1];
+    }
+
+    if (savedWifiCount > 0) {
+        savedWifiSsids[savedWifiCount - 1] = "";
+        savedWifiPasswords[savedWifiCount - 1] = "";
+        --savedWifiCount;
+    }
+
+    persistWifiConfiguration();
+    return true;
+}
+
+int findNextAvailableSavedWifiIndex(int startIndex) {
+    if (startIndex < 0) {
+        startIndex = 0;
+    }
+
+    if (startIndex >= savedWifiCount) {
+        return -1;
+    }
+
+    ensureScanCapableWifiMode();
+
+    Serial.println("Scanning for saved Wi-Fi networks...");
+    const int networkCount = WiFi.scanNetworks(false, true);
+    if (networkCount <= 0) {
+        WiFi.scanDelete();
+        return -1;
+    }
+
+    int matchedIndex = -1;
+    for (int savedIndex = startIndex; savedIndex < savedWifiCount; ++savedIndex) {
+        for (int scanIndex = 0; scanIndex < networkCount; ++scanIndex) {
+            const String scannedSsid = WiFi.SSID(scanIndex);
+            if (scannedSsid.length() == 0) {
+                continue;
+            }
+
+            if (savedWifiSsids[savedIndex] == scannedSsid) {
+                matchedIndex = savedIndex;
+                break;
+            }
+        }
+
+        if (matchedIndex >= 0) {
+            break;
+        }
+    }
+
+    WiFi.scanDelete();
+    return matchedIndex;
+}
+
+bool startSavedWifiConnectionByIndex(int index) {
+    const int availableIndex = findNextAvailableSavedWifiIndex(index);
+    if (availableIndex < 0 || availableIndex >= savedWifiCount) {
+        return false;
+    }
+
+    connectingWifiIndex = availableIndex;
+    pendingWifiSsid = "";
+    wifiSelectionIndexPending = false;
+    wifiSelectionPasswordPending = false;
+    wifiForgetIndexPending = false;
+
+    const String& ssid = savedWifiSsids[availableIndex];
+    const String& password = savedWifiPasswords[availableIndex];
+
+    WiFi.softAPdisconnect(true);
+    WiFi.disconnect(true, true);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid.c_str(), password.c_str());
+
+    apModeActive = false;
+    stationConnectStartMs = millis();
+    stationConnectAnnounced = true;
+    stationConnectedAnnounced = false;
+
+    Serial.print("Connecting to Wi-Fi network: ");
+    Serial.println(ssid);
+    if (availableIndex > index) {
+        Serial.println("Earlier saved networks were not visible, so they were skipped.");
+    }
+    if (savedWifiCount > 1 && availableIndex + 1 < savedWifiCount) {
+        Serial.println("If it does not connect, the next saved network will be tried automatically.");
+    } else {
+        Serial.println("Waiting up to 30 seconds before falling back to AP mode...");
+    }
+    return true;
 }
 
 void printStationConnectedMessage() {
@@ -81,6 +283,7 @@ bool startAccessPointMode() {
     stationConnectStartMs = 0;
     stationConnectAnnounced = false;
     stationConnectedAnnounced = false;
+    connectingWifiIndex = -1;
 
     Serial.print("Wi-Fi AP started. SSID: ");
     Serial.println(WEB_AP_SSID);
@@ -96,6 +299,21 @@ void startStationMode(const String& ssid, const String& password, bool saveConfi
         saveWifiConfiguration(ssid, password);
     }
 
+    loadWifiConfiguration();
+
+    int savedIndex = -1;
+    for (int i = 0; i < savedWifiCount; ++i) {
+        if (savedWifiSsids[i] == ssid) {
+            savedIndex = i;
+            break;
+        }
+    }
+
+    if (savedIndex >= 0 && startSavedWifiConnectionByIndex(savedIndex)) {
+        return;
+    }
+
+    connectingWifiIndex = -1;
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true, true);
     WiFi.mode(WIFI_STA);
@@ -252,8 +470,8 @@ bool beginWebServer() {
     });
 
     loadWifiConfiguration();
-    if (configuredWifiSsid.length() > 0) {
-        startStationMode(configuredWifiSsid, configuredWifiPassword, false);
+    if (savedWifiCount > 0) {
+        startSavedWifiConnectionByIndex(0);
     } else if (!startAccessPointMode()) {
         return false;
     }
@@ -276,8 +494,15 @@ void updateWebServer() {
                 stationConnectedAnnounced = true;
             }
         } else if (stationConnectStartMs != 0 && millis() - stationConnectStartMs >= WIFI_CONNECT_TIMEOUT_MS) {
-            Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
-            startAccessPointMode();
+            if (connectingWifiIndex >= 0 && connectingWifiIndex + 1 < savedWifiCount) {
+                Serial.print("Wi-Fi station connect timed out for ");
+                Serial.print(savedWifiSsids[connectingWifiIndex]);
+                Serial.println(". Trying next saved network.");
+                startSavedWifiConnectionByIndex(connectingWifiIndex + 1);
+            } else {
+                Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
+                startAccessPointMode();
+            }
         }
     }
 
@@ -297,6 +522,7 @@ void beginWifiSelection() {
 
     wifiSelectionIndexPending = false;
     wifiSelectionPasswordPending = false;
+    wifiForgetIndexPending = false;
     pendingWifiSsid = "";
     scannedNetworkCount = 0;
 
@@ -348,14 +574,39 @@ void beginWifiSelection() {
     Serial.println("Choose Wi-Fi network number:");
 }
 
+void beginWifiForget() {
+    wifiSelectionIndexPending = false;
+    wifiSelectionPasswordPending = false;
+    wifiForgetIndexPending = false;
+    pendingWifiSsid = "";
+
+    loadWifiConfiguration();
+    if (savedWifiCount == 0) {
+        Serial.println("No saved Wi-Fi networks to forget.");
+        return;
+    }
+
+    Serial.println("Saved Wi-Fi networks:");
+    for (int i = 0; i < savedWifiCount; ++i) {
+        Serial.print("  ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.println(savedWifiSsids[i]);
+    }
+
+    wifiForgetIndexPending = true;
+    Serial.println("Choose saved Wi-Fi network number to forget:");
+}
+
 bool handleWifiSelectionInput(const String& input) {
-    if (!wifiSelectionIndexPending && !wifiSelectionPasswordPending) {
+    if (!wifiSelectionIndexPending && !wifiSelectionPasswordPending && !wifiForgetIndexPending) {
         return false;
     }
 
+    String trimmed = input;
+    trimmed.trim();
+
     if (wifiSelectionIndexPending) {
-        String trimmed = input;
-        trimmed.trim();
         int selectedNumber = trimmed.toInt();
         if (selectedNumber < 1 || selectedNumber > scannedNetworkCount) {
             Serial.println("Invalid Wi-Fi selection. Enter one of the listed numbers:");
@@ -371,6 +622,46 @@ bool handleWifiSelectionInput(const String& input) {
         return true;
     }
 
+    if (wifiForgetIndexPending) {
+        int selectedNumber = trimmed.toInt();
+        if (selectedNumber < 1 || selectedNumber > savedWifiCount) {
+            Serial.println("Invalid Wi-Fi selection. Enter one of the listed numbers:");
+            return true;
+        }
+
+        const int forgetIndex = selectedNumber - 1;
+        const String forgottenSsid = savedWifiSsids[forgetIndex];
+        const String connectedSsid = WiFi.status() == WL_CONNECTED ? WiFi.SSID() : "";
+        const bool wasConnectedNetwork = connectedSsid == forgottenSsid;
+        const bool wasPendingNetwork = connectingWifiIndex >= 0
+            && connectingWifiIndex < savedWifiCount
+            && savedWifiSsids[connectingWifiIndex] == forgottenSsid;
+
+        wifiForgetIndexPending = false;
+        removeSavedWifiByIndex(forgetIndex);
+
+        Serial.print("Forgot Wi-Fi network: ");
+        Serial.println(forgottenSsid);
+
+        if (wasConnectedNetwork || wasPendingNetwork) {
+            WiFi.disconnect(true, true);
+            stationConnectStartMs = 0;
+            stationConnectAnnounced = false;
+            stationConnectedAnnounced = false;
+            connectingWifiIndex = -1;
+
+            if (savedWifiCount > 0) {
+                Serial.println("Reconnecting using the remaining saved networks...");
+                startSavedWifiConnectionByIndex(0);
+            } else {
+                Serial.println("No saved Wi-Fi networks remain. Starting AP mode.");
+                startAccessPointMode();
+            }
+        }
+
+        return true;
+    }
+
     if (wifiSelectionPasswordPending) {
         String password = input;
         wifiSelectionPasswordPending = false;
@@ -383,29 +674,47 @@ bool handleWifiSelectionInput(const String& input) {
 }
 
 bool wifiSelectionPending() {
-    return wifiSelectionIndexPending || wifiSelectionPasswordPending;
+    return wifiSelectionIndexPending || wifiSelectionPasswordPending || wifiForgetIndexPending;
 }
 
 void printWifiStatus() {
+    loadWifiConfiguration();
+
     if (WiFi.status() == WL_CONNECTED) {
         Serial.print("Wi-Fi STA connected to ");
         Serial.print(WiFi.SSID());
         Serial.print(" at ");
         Serial.println(WiFi.localIP());
-        return;
-    }
-
-    if (apModeActive) {
+    } else if (apModeActive) {
         Serial.print("Wi-Fi AP mode active at ");
         Serial.println(WiFi.softAPIP());
-        return;
-    }
-
-    if (stationConnectStartMs != 0) {
+    } else if (stationConnectStartMs != 0) {
         Serial.print("Connecting to Wi-Fi network: ");
-        Serial.println(configuredWifiSsid);
+        if (connectingWifiIndex >= 0 && connectingWifiIndex < savedWifiCount) {
+            Serial.println(savedWifiSsids[connectingWifiIndex]);
+        } else {
+            Serial.println("unknown");
+        }
+    } else {
+        Serial.println("Wi-Fi not configured. AP fallback will be used.");
+    }
+
+    if (savedWifiCount == 0) {
+        Serial.println("Saved Wi-Fi networks: none");
         return;
     }
 
-    Serial.println("Wi-Fi not configured. AP fallback will be used.");
+    Serial.println("Saved Wi-Fi networks:");
+    for (int i = 0; i < savedWifiCount; ++i) {
+        Serial.print("  ");
+        Serial.print(i + 1);
+        Serial.print(": ");
+        Serial.print(savedWifiSsids[i]);
+        if (WiFi.status() == WL_CONNECTED && WiFi.SSID() == savedWifiSsids[i]) {
+            Serial.print(" (connected)");
+        } else if (stationConnectStartMs != 0 && connectingWifiIndex == i) {
+            Serial.print(" (trying now)");
+        }
+        Serial.println();
+    }
 }
