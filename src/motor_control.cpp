@@ -5,8 +5,18 @@
 #include "app_config.h"
 #include "app_state.h"
 
+namespace {
+void driveEscSignalLow() {
+    pinMode(ESC_PWM_PIN, OUTPUT);
+    digitalWrite(ESC_PWM_PIN, LOW);
+}
+}  // namespace
+
 void beginMotorControl() {
+    driveEscSignalLow();
+    delay(20);
     ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+    ledcWrite(PWM_CHANNEL, microsecondsToDuty(1000));
     ledcAttachPin(ESC_PWM_PIN, PWM_CHANNEL);
     stopMotorImmediate();
 }

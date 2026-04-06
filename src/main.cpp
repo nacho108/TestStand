@@ -24,6 +24,11 @@ constexpr int AVAILABLE_LED_PIN = LED_BUILTIN;
 bool availableLedState = false;
 unsigned long lastAvailableLedToggle = 0;
 
+void holdEscSignalLowAtBoot() {
+    pinMode(ESC_PWM_PIN, OUTPUT);
+    digitalWrite(ESC_PWM_PIN, LOW);
+}
+
 void beginAvailableLed() {
     pinMode(AVAILABLE_LED_PIN, OUTPUT);
     digitalWrite(AVAILABLE_LED_PIN, LOW);
@@ -41,6 +46,7 @@ void updateAvailableLed() {
 }  // namespace
 
 void setup() {
+    holdEscSignalLowAtBoot();
     Serial.begin(115200);
     delay(1000);
     beginAvailableLed();
