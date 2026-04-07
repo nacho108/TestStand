@@ -43,6 +43,14 @@
           <div class="group-card__stack">
             <article class="metric-row">
               <div class="metric-row__top">
+                <span class="metric-row__label">Throttle</span>
+                <strong class="metric-row__value" id="overview-throttle-value">--</strong>
+              </div>
+              <span class="metric-row__health" id="overview-throttle-health">Waiting for motor command</span>
+            </article>
+
+            <article class="metric-row">
+              <div class="metric-row__top">
                 <span class="metric-row__label">RPM</span>
                 <strong class="metric-row__value" id="rpm-value">--</strong>
               </div>
@@ -128,6 +136,16 @@
       </section>
 
       <section class="testing-extras" data-view-pane="testing" hidden>
+        <div class="test-grid">
+          <article class="metric-row">
+            <div class="metric-row__top">
+              <span class="metric-row__label">Throttle</span>
+              <strong class="metric-row__value" id="testing-throttle-value">--</strong>
+            </div>
+            <span class="metric-row__health" id="testing-throttle-health">Waiting for motor command</span>
+          </article>
+        </div>
+
         <div class="test-actions">
           <button class="test-button" id="start-motor-test-button" type="button">Start test</button>
         </div>

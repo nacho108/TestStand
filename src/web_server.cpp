@@ -409,6 +409,7 @@ String buildStatusJson() {
     appendJsonFloat(json, "voltage_v", voltageV, 3);
     appendJsonFloat(json, "current_a", currentA, 3);
     appendJsonFloat(json, "power_w", powerW, 3);
+    appendJsonFloat(json, "throttle_percent", throttlePercent, 1);
     appendJsonFloat(json, "rpm", rpm, 1);
     appendJsonFloat(json, "esc_temperature_c", escTemperatureC, 2);
     appendJsonBool(json, "ir_detected", irDetected);

@@ -302,6 +302,12 @@ body::before {
   gap: 12px;
 }
 
+.test-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
 .test-actions {
   display: flex;
   justify-content: flex-start;

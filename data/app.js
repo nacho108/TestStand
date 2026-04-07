@@ -2,6 +2,10 @@ window.addEventListener("load", () => {
   const ui = {
     viewTitle: document.getElementById("view-title"),
     startMotorTestButton: document.getElementById("start-motor-test-button"),
+    overviewThrottle: document.getElementById("overview-throttle-value"),
+    overviewThrottleHealth: document.getElementById("overview-throttle-health"),
+    testingThrottle: document.getElementById("testing-throttle-value"),
+    testingThrottleHealth: document.getElementById("testing-throttle-health"),
     voltage: document.getElementById("voltage-value"),
     current: document.getElementById("current-value"),
     power: document.getElementById("power-value"),
@@ -85,6 +89,8 @@ window.addEventListener("load", () => {
   };
 
   const applyDisconnectedState = () => {
+    setHealth(ui.overviewThrottleHealth, "Waiting for motor command", "warn");
+    setHealth(ui.testingThrottleHealth, "Waiting for motor command", "warn");
     setHealth(ui.voltageHealth, "Waiting for ESC telemetry", "error");
     setHealth(ui.currentHealth, "Waiting for ESC telemetry", "error");
     setHealth(ui.powerHealth, "Waiting for live feed", "error");
@@ -104,6 +110,8 @@ window.addEventListener("load", () => {
     setText(ui.voltage, formatNumber(data.voltage_v, "V", 3));
     setText(ui.current, formatNumber(data.current_a, "A", 3));
     setText(ui.power, formatNumber(data.power_w, "W", 2));
+    setText(ui.overviewThrottle, formatNumber(data.throttle_percent, "%", 1));
+    setText(ui.testingThrottle, formatNumber(data.throttle_percent, "%", 1));
     setText(ui.rpm, formatInteger(data.rpm, "rpm"));
     setText(ui.escTemp, formatNumber(data.esc_temperature_c, "deg C", 1));
     setText(ui.motorTemp, formatNumber(data.ir_object_c, "deg C", 1));
@@ -112,12 +120,16 @@ window.addEventListener("load", () => {
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
 
     if (hasTelemetry) {
+      setHealth(ui.overviewThrottleHealth, "Throttle command active");
+      setHealth(ui.testingThrottleHealth, "Throttle command active");
       setHealth(ui.voltageHealth, "ESC telemetry healthy");
       setHealth(ui.currentHealth, "Current sensor healthy");
       setHealth(ui.powerHealth, "Computed from live feed");
       setHealth(ui.rpmHealth, "RPM telemetry healthy");
       setHealth(ui.escTempHealth, "ESC thermal sensor healthy");
     } else {
+      setHealth(ui.overviewThrottleHealth, "Awaiting ESC telemetry", "warn");
+      setHealth(ui.testingThrottleHealth, "Awaiting ESC telemetry", "warn");
       setHealth(ui.voltageHealth, "Awaiting ESC telemetry", "warn");
       setHealth(ui.currentHealth, "Awaiting ESC telemetry", "warn");
       setHealth(ui.powerHealth, "Waiting for live feed", "warn");
