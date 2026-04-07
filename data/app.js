@@ -22,7 +22,23 @@ window.addEventListener("load", () => {
     thrustHealth: document.getElementById("thrust-health"),
     escTempHealth: document.getElementById("esc-temp-health"),
     motorTempHealth: document.getElementById("motor-temp-health"),
-    ambientTempHealth: document.getElementById("ambient-temp-health")
+    ambientTempHealth: document.getElementById("ambient-temp-health"),
+    chartThrustPath: document.querySelector(".chart-line--thrust path"),
+    chartPowerPath: document.querySelector(".chart-line--power path"),
+    chartRpmPath: document.querySelector(".chart-line--rpm path"),
+    chartTempPath: document.querySelector(".chart-line--temp path"),
+    chartLeftTopPower: document.getElementById("chart-left-top-power"),
+    chartLeftMidPower: document.getElementById("chart-left-mid-power"),
+    chartLeftBottomPower: document.getElementById("chart-left-bottom-power"),
+    chartLeftTopRpm: document.getElementById("chart-left-top-rpm"),
+    chartLeftMidRpm: document.getElementById("chart-left-mid-rpm"),
+    chartLeftBottomRpm: document.getElementById("chart-left-bottom-rpm"),
+    chartRightTopThrust: document.getElementById("chart-right-top-thrust"),
+    chartRightMidThrust: document.getElementById("chart-right-mid-thrust"),
+    chartRightBottomThrust: document.getElementById("chart-right-bottom-thrust"),
+    chartRightTopTemp: document.getElementById("chart-right-top-temp"),
+    chartRightMidTemp: document.getElementById("chart-right-mid-temp"),
+    chartRightBottomTemp: document.getElementById("chart-right-bottom-temp")
   };
 
   const links = Array.from(document.querySelectorAll("[data-view-link]"));
@@ -101,6 +117,101 @@ window.addEventListener("load", () => {
     setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
   };
 
+  const formatScaleValue = (value, unit, digits = 0) => {
+    if (!Number.isFinite(value)) {
+      return `-- ${unit}`;
+    }
+
+    return `${Number(value).toFixed(digits)} ${unit}`;
+  };
+
+  const setScaleLabels = (topElement, midElement, bottomElement, maxValue, unit, digits = 0) => {
+    setText(topElement, formatScaleValue(maxValue, unit, digits));
+    setText(midElement, formatScaleValue(maxValue / 2, unit, digits));
+    setText(bottomElement, formatScaleValue(0, unit, digits));
+  };
+
+  const getSeriesMax = (rows, valueKey) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return 0;
+    }
+
+    return rows.reduce((max, row) => {
+      const value = Number(row?.[valueKey]);
+      if (!Number.isFinite(value)) {
+        return max;
+      }
+
+      return Math.max(max, value);
+    }, 0);
+  };
+
+  const updateChartScales = (rows) => {
+    const maxPower = getSeriesMax(rows, "power_w");
+    const maxRpm = getSeriesMax(rows, "rpm");
+    const maxThrust = getSeriesMax(rows, "thrust_grams");
+    const maxTemp = getSeriesMax(rows, "motor_temperature_c");
+
+    setScaleLabels(ui.chartLeftTopPower, ui.chartLeftMidPower, ui.chartLeftBottomPower, maxPower, "W", 0);
+    setScaleLabels(ui.chartLeftTopRpm, ui.chartLeftMidRpm, ui.chartLeftBottomRpm, maxRpm, "rpm", 0);
+    setScaleLabels(ui.chartRightTopThrust, ui.chartRightMidThrust, ui.chartRightBottomThrust, maxThrust, "g", 0);
+    setScaleLabels(ui.chartRightTopTemp, ui.chartRightMidTemp, ui.chartRightBottomTemp, maxTemp, "C", 1);
+  };
+
+  const buildChartPath = (rows, valueKey) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return "M0,100 L100,100";
+    }
+
+    const points = rows
+      .map((row) => {
+        const x = Number(row?.throttle_percent);
+        const y = Number(row?.[valueKey]);
+        if (Number.isNaN(x) || Number.isNaN(y)) {
+          return null;
+        }
+
+        return { x, y };
+      })
+      .filter(Boolean);
+
+    if (points.length === 0) {
+      return "M0,100 L100,100";
+    }
+
+    const maxY = points.reduce((max, point) => Math.max(max, point.y), 0);
+    const safeMaxY = maxY > 0 ? maxY : 1;
+
+    return points
+      .map((point, index) => {
+        const px = Math.max(0, Math.min(100, point.x));
+        const py = 100 - (point.y / safeMaxY) * 100;
+        const clampedY = Math.max(0, Math.min(100, py));
+        return `${index === 0 ? "M" : "L"}${px.toFixed(2)},${clampedY.toFixed(2)}`;
+      })
+      .join(" ");
+  };
+
+  const updateTestChart = (rows) => {
+    updateChartScales(rows);
+
+    if (ui.chartThrustPath) {
+      ui.chartThrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams"));
+    }
+
+    if (ui.chartPowerPath) {
+      ui.chartPowerPath.setAttribute("d", buildChartPath(rows, "power_w"));
+    }
+
+    if (ui.chartRpmPath) {
+      ui.chartRpmPath.setAttribute("d", buildChartPath(rows, "rpm"));
+    }
+
+    if (ui.chartTempPath) {
+      ui.chartTempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c"));
+    }
+  };
+
   const applyStatus = (data) => {
     const hasTelemetry = Boolean(data.telemetry_valid);
     const hasIr = Boolean(data.ir_detected);
@@ -118,6 +229,15 @@ window.addEventListener("load", () => {
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
+    updateTestChart(data.test_results);
+
+    if (Boolean(data.test_running)) {
+      motorTestPending = true;
+      setMotorTestButtonState("Test running...", true);
+    } else {
+      motorTestPending = false;
+      setMotorTestButtonState("Start test", false);
+    }
 
     if (hasTelemetry) {
       setHealth(ui.overviewThrottleHealth, "Throttle command active");
@@ -209,6 +329,7 @@ window.addEventListener("load", () => {
 
     motorTestPending = true;
     setMotorTestButtonState("Starting...", true);
+    updateTestChart([]);
 
     try {
       const body = new URLSearchParams({ cmd: "motor test" });
@@ -225,10 +346,6 @@ window.addEventListener("load", () => {
       }
 
       setMotorTestButtonState("Test running...", true);
-      window.setTimeout(() => {
-        motorTestPending = false;
-        setMotorTestButtonState("Start test", false);
-      }, 1500);
     } catch (error) {
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
@@ -263,7 +380,14 @@ window.addEventListener("load", () => {
 
     socket.addEventListener("message", (event) => {
       try {
-        applyStatus(JSON.parse(event.data));
+        const data = JSON.parse(event.data);
+        applyStatus(data);
+        if (!data.test_running) {
+          motorTestPending = false;
+          setMotorTestButtonState("Start test", false);
+        } else {
+          setMotorTestButtonState("Test running...", true);
+        }
       } catch (error) {
         setHealth(ui.powerHealth, "Malformed live payload", "error");
       }

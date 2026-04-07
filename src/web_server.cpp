@@ -378,6 +378,35 @@ void appendJsonFloat(String& json, const char* key, float value, int decimals, b
     }
 }
 
+void appendJsonTestResults(String& json, bool withComma = true) {
+    json += "\"test_results\":[";
+
+    for (int i = 0; i < testResultCount; ++i) {
+        const TestResultRow& row = testResults[i];
+        json += "{";
+        appendJsonUnsigned(json, "throttle_percent", (unsigned long)row.throttlePercent);
+        appendJsonFloat(json, "voltage_v", row.voltageV, 3);
+        appendJsonFloat(json, "current_a", row.currentA, 3);
+        appendJsonFloat(json, "power_w", row.powerW, 3);
+        appendJsonFloat(json, "rpm", row.rpm, 1);
+        appendJsonFloat(json, "esc_temperature_c", row.escTemperatureC, 2);
+        appendJsonFloat(json, "motor_temperature_c", row.motorTemperatureC, 2);
+        appendJsonFloat(json, "thrust_grams", row.weightGrams, 3);
+        appendJsonUnsigned(json, "sample_count", row.sampleCount);
+        appendJsonUnsigned(json, "scale_sample_count", row.scaleSampleCount, false);
+        json += "}";
+
+        if (i + 1 < testResultCount) {
+            json += ",";
+        }
+    }
+
+    json += "]";
+    if (withComma) {
+        json += ",";
+    }
+}
+
 String buildStatusJson() {
     float irAmbient = lastIrAmbientC;
     float irObject = lastIrObjectC;
@@ -402,7 +431,7 @@ String buildStatusJson() {
     const unsigned long nowMs = millis();
 
     String json;
-    json.reserve(512);
+    json.reserve(2048);
     json += "{";
     appendJsonUnsigned(json, "timestamp_ms", nowMs);
     appendJsonBool(json, "telemetry_valid", telemetryValid);
@@ -424,7 +453,10 @@ String buildStatusJson() {
     appendJsonBool(json, "wifi_ap_active", apModeActive);
     appendJsonUnsigned(json, "telemetry_last_update_ms", lastTlm.lastUpdateMs);
     appendJsonUnsigned(json, "scale_last_read_ms", lastScaleReadMs);
-    appendJsonUnsigned(json, "ir_last_read_ms", lastIrReadMs, false);
+    appendJsonUnsigned(json, "ir_last_read_ms", lastIrReadMs);
+    appendJsonBool(json, "test_running", testRunning);
+    appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount);
+    appendJsonTestResults(json, false);
     json += "}";
     return json;
 }

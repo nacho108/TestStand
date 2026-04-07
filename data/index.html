@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=3">
+  <link rel="stylesheet" href="/styles.css?v=6">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -156,16 +156,43 @@
           </div>
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
-            <span class="legend-power">Power</span>
+            <span class="legend-power">Watts</span>
             <span class="legend-rpm">RPM</span>
-            <span class="legend-temp">Temperature</span>
+            <span class="legend-temp">Motor temp</span>
           </div>
           <div class="chart-plot" aria-hidden="true">
+            <div class="chart-scale chart-scale--left">
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="chart-left-top-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-top-rpm">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="chart-left-mid-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-mid-rpm">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="chart-left-bottom-power">0 W</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-bottom-rpm">0 rpm</span>
+              </div>
+            </div>
             <div class="chart-plot__grid"></div>
             <div class="chart-plot__axis chart-plot__axis--y"></div>
             <div class="chart-plot__axis chart-plot__axis--x"></div>
-            <span class="chart-plot__ylabel">Thrust / Power / RPM / Temp</span>
-            <span class="chart-plot__xlabel">Throttle</span>
+            <div class="chart-scale chart-scale--right">
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-top-temp">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-mid-temp">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-bottom-temp">0 C</span>
+              </div>
+            </div>
+            <span class="chart-plot__xlabel">Throttle %</span>
             <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
               <path d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
             </svg>
@@ -179,11 +206,11 @@
               <path d="M0,98 C20,97 34,90 52,78 S78,50 100,34"></path>
             </svg>
             <div class="chart-ticks">
-              <span>0%</span>
-              <span>25%</span>
-              <span>50%</span>
-              <span>75%</span>
-              <span>100%</span>
+              <span>0</span>
+              <span>25</span>
+              <span>50</span>
+              <span>75</span>
+              <span>100</span>
             </div>
           </div>
         </article>
@@ -191,6 +218,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=3"></script>
+  <script src="/app.js?v=6"></script>
 </body>
 </html>

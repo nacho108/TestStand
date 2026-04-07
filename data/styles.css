@@ -372,7 +372,7 @@ body::before {
 
 .chart-plot__grid {
   position: absolute;
-  inset: 18px 18px 36px 42px;
+  inset: 18px 92px 36px 92px;
   background:
     linear-gradient(to right, rgba(33, 49, 66, 0.06) 1px, transparent 1px) 0 0 / 20% 100%,
     linear-gradient(to top, rgba(33, 49, 66, 0.06) 1px, transparent 1px) 0 0 / 100% 20%;
@@ -384,20 +384,19 @@ body::before {
 }
 
 .chart-plot__axis--y {
-  left: 42px;
+  left: 92px;
   top: 18px;
   bottom: 36px;
   width: 1px;
 }
 
 .chart-plot__axis--x {
-  left: 42px;
-  right: 18px;
+  left: 92px;
+  right: 92px;
   bottom: 36px;
   height: 1px;
 }
 
-.chart-plot__ylabel,
 .chart-plot__xlabel {
   position: absolute;
   color: var(--ink-soft);
@@ -407,27 +406,28 @@ body::before {
   text-transform: uppercase;
 }
 
-.chart-plot__ylabel {
-  top: 18px;
-  left: 10px;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-}
-
 .chart-plot__xlabel {
   bottom: 8px;
-  right: 18px;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .chart-line {
   position: absolute;
-  left: 42px;
-  right: 18px;
+  left: 92px;
+  right: 92px;
   bottom: 36px;
+  width: calc(100% - 184px);
   height: 180px;
   fill: none;
-  stroke-width: 3;
+  stroke-width: 1.5;
   opacity: 0.96;
+}
+
+.chart-line path {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .chart-line--thrust { stroke: #244d74; }
@@ -437,8 +437,8 @@ body::before {
 
 .chart-ticks {
   position: absolute;
-  left: 42px;
-  right: 18px;
+  left: 92px;
+  right: 92px;
   bottom: 12px;
   display: flex;
   justify-content: space-between;
@@ -446,6 +446,44 @@ body::before {
   font-size: 0.76rem;
   font-weight: 600;
 }
+
+.chart-scale {
+  position: absolute;
+  top: 18px;
+  bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
+  width: 78px;
+}
+
+.chart-scale--left {
+  left: 8px;
+  text-align: right;
+}
+
+.chart-scale--right {
+  right: 8px;
+  text-align: left;
+}
+
+.chart-scale__tick {
+  display: grid;
+  gap: 3px;
+  min-height: 32px;
+}
+
+.chart-scale__value {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.chart-scale__value--thrust { color: #244d74; }
+.chart-scale__value--power { color: #546fe5; }
+.chart-scale__value--rpm { color: #2ea9b8; }
+.chart-scale__value--temp { color: #ff7c5c; }
 
 @media (max-width: 1180px) {
   .group-grid {
