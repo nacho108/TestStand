@@ -15,6 +15,7 @@ unsigned long lastScaleReadMs = 0;
 int32_t lastScaleRaw = 0;
 float lastScaleWeight = 0.0f;
 float lastScaleStdDev = 0.0f;
+uint32_t lastScaleWindowSampleCount = 0;
 bool lastScaleSampleValid = false;
 
 String inputBuffer;

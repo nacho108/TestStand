@@ -7,25 +7,130 @@
 #include "esc_telemetry.h"
 #include "motor_control.h"
 
+namespace {
+
+constexpr size_t SCALE_WINDOW_CAPACITY = 256;
+
+struct ScaleWindowSample {
+    unsigned long timestampMs = 0;
+    int32_t raw = 0;
+    float weight = 0.0f;
+};
+
+ScaleWindowSample scaleWindow[SCALE_WINDOW_CAPACITY];
+size_t scaleWindowHead = 0;
+size_t scaleWindowCount = 0;
+int64_t scaleWindowRawSum = 0;
+double scaleWindowWeightSum = 0.0;
+double scaleWindowWeightSqSum = 0.0;
+
+void clearScaleWindow() {
+    scaleWindowHead = 0;
+    scaleWindowCount = 0;
+    scaleWindowRawSum = 0;
+    scaleWindowWeightSum = 0.0;
+    scaleWindowWeightSqSum = 0.0;
+    lastScaleReadMs = 0;
+    lastScaleRaw = 0;
+    lastScaleWeight = 0.0f;
+    lastScaleWindowSampleCount = 0;
+    lastScaleSampleValid = false;
+    lastScaleStdDev = 0.0f;
+}
+
+void removeOldestScaleWindowSample() {
+    if (scaleWindowCount == 0) {
+        return;
+    }
+
+    const ScaleWindowSample& sample = scaleWindow[scaleWindowHead];
+    scaleWindowRawSum -= sample.raw;
+    scaleWindowWeightSum -= sample.weight;
+    scaleWindowWeightSqSum -= (double)sample.weight * (double)sample.weight;
+    scaleWindowHead = (scaleWindowHead + 1) % SCALE_WINDOW_CAPACITY;
+    --scaleWindowCount;
+}
+
+void trimScaleWindow(unsigned long nowMs) {
+    while (scaleWindowCount > 0) {
+        const ScaleWindowSample& oldest = scaleWindow[scaleWindowHead];
+        if (nowMs - oldest.timestampMs <= SCALE_AVG_WINDOW_MS) {
+            break;
+        }
+        removeOldestScaleWindowSample();
+    }
+}
+
+void refreshScaleWindowOutputs(unsigned long nowMs) {
+    trimScaleWindow(nowMs);
+
+    if (scaleWindowCount == 0) {
+        lastScaleWindowSampleCount = 0;
+        lastScaleSampleValid = false;
+        lastScaleStdDev = 0.0f;
+        return;
+    }
+
+    lastScaleWindowSampleCount = (uint32_t)scaleWindowCount;
+    lastScaleRaw = (int32_t)(scaleWindowRawSum / (int64_t)scaleWindowCount);
+    lastScaleWeight = (float)(scaleWindowWeightSum / (double)scaleWindowCount);
+
+    double meanSq = scaleWindowWeightSqSum / (double)scaleWindowCount;
+    double sqMean = (double)lastScaleWeight * (double)lastScaleWeight;
+    double variance = meanSq - sqMean;
+    if (variance < 0.0) {
+        variance = 0.0;
+    }
+
+    lastScaleStdDev = (float)sqrt(variance);
+    lastScaleSampleValid = true;
+}
+
+void pushScaleSample(int32_t raw) {
+    const unsigned long nowMs = millis();
+    const float weight = rawToWeightGrams(raw);
+
+    trimScaleWindow(nowMs);
+    if (scaleWindowCount == SCALE_WINDOW_CAPACITY) {
+        removeOldestScaleWindowSample();
+    }
+
+    const size_t insertIndex = (scaleWindowHead + scaleWindowCount) % SCALE_WINDOW_CAPACITY;
+    scaleWindow[insertIndex].timestampMs = nowMs;
+    scaleWindow[insertIndex].raw = raw;
+    scaleWindow[insertIndex].weight = weight;
+    ++scaleWindowCount;
+
+    scaleWindowRawSum += raw;
+    scaleWindowWeightSum += weight;
+    scaleWindowWeightSqSum += (double)weight * (double)weight;
+
+    lastScaleReadMs = nowMs;
+    refreshScaleWindowOutputs(nowMs);
+}
+
+}
+
 void beginScaleManager() {
     scaleDetected = scale.begin();
     if (!scaleDetected) {
+        clearScaleWindow();
         return;
     }
 
     scale.setSampleRate(NAU7802_SPS_320);
     scale.calibrateAFE();
     loadScaleCalibration();
+    clearScaleWindow();
 }
 
 void pollScale() {
     while (scaleDetected && scale.available()) {
-        int32_t raw = scale.getReading();
-        lastScaleRaw = raw;
-        lastScaleWeight = rawToWeightGrams(raw);
-        lastScaleStdDev = 0.0f;
-        lastScaleReadMs = millis();
-        lastScaleSampleValid = true;
+        pushScaleSample(scale.getReading());
+    }
+
+    if (scaleDetected) {
+        refreshScaleWindowOutputs(millis());
     }
 }
 
@@ -68,6 +173,10 @@ float rawToWeightGrams(int32_t raw) {
     return ((float)raw - (float)scale.getZeroOffset()) / calFactor;
 }
 
+uint32_t getScaleWindowSampleCount() {
+    return lastScaleWindowSampleCount;
+}
+
 bool acquireAveragedScaleSample(
     unsigned long durationMs,
     int32_t& avgRaw,
@@ -104,6 +213,7 @@ bool acquireAveragedScaleSample(
         while (scale.available()) {
             int32_t raw = scale.getReading();
             float weight = rawToWeightGrams(raw);
+            pushScaleSample(raw);
 
             rawSum += raw;
             weightSum += weight;
@@ -171,6 +281,9 @@ void printScaleStatus() {
         Serial.print(lastScaleStdDev, 3);
         Serial.println(" g");
 
+        Serial.print("  moving-average samples: ");
+        Serial.println(lastScaleWindowSampleCount);
+
         Serial.print("  last sample age: ");
         Serial.print(millis() - lastScaleReadMs);
         Serial.println(" ms");
@@ -185,29 +298,25 @@ void printScaleReading() {
         return;
     }
 
-    Serial.println("Reading scale for 0.5 s...");
-
-    int32_t avgRaw = 0;
-    float avgWeight = 0.0f;
-    float stddev = 0.0f;
-    uint32_t samples = 0;
-
-    if (!acquireAveragedScaleSample(SCALE_AVG_WINDOW_MS, avgRaw, avgWeight, stddev, samples)) {
+    pollScale();
+    if (!lastScaleSampleValid) {
         Serial.println("Scale data not ready yet");
         return;
     }
 
     Serial.print("Scale raw=");
-    Serial.print(avgRaw);
+    Serial.print(lastScaleRaw);
     Serial.print("  weight=");
-    Serial.print(avgWeight, 3);
+    Serial.print(lastScaleWeight, 3);
     Serial.print(" g  samples=");
-    Serial.print(samples);
+    Serial.print(lastScaleWindowSampleCount);
     Serial.print("  stddev=");
-    Serial.print(stddev, 3);
+    Serial.print(lastScaleStdDev, 3);
     Serial.print(" g  precision(+/-3sigma)=");
-    Serial.print(3.0f * stddev, 3);
-    Serial.println(" g");
+    Serial.print(3.0f * lastScaleStdDev, 3);
+    Serial.print(" g  window=");
+    Serial.print(SCALE_AVG_WINDOW_MS);
+    Serial.println(" ms");
 }
 
 void tareScale() {
@@ -230,6 +339,7 @@ void tareScale() {
 
     scale.setZeroOffset(avgRaw);
     saveScaleCalibration();
+    clearScaleWindow();
     lastScaleSampleValid = false;
 
     Serial.print("Scale tared using ");
@@ -277,6 +387,7 @@ void calibrateScale(float knownWeightGrams) {
     float newCalFactor = (float)delta / knownWeightGrams;
     scale.setCalibrationFactor(newCalFactor);
     saveScaleCalibration();
+    clearScaleWindow();
 
     int32_t verifyRaw = 0;
     float verifyWeight = 0.0f;

@@ -72,7 +72,7 @@ void printHelp() {
     Serial.println("  telemetry on                 -> start periodic telemetry output");
     Serial.println("  telemetry off                -> stop periodic telemetry output");
     Serial.println("  scale status                 -> print NAU7802 status");
-    Serial.println("  scale read                   -> read averaged load cell value over 0.5 s");
+    Serial.println("  scale read                   -> print live 0.5 s moving-average load cell value");
     Serial.println("  scale tare                   -> tare / zero the load cell with 1 second average");
     Serial.println("  scale calibration <grams>    -> calibrate scale using known weight in grams with 1 second average");
     Serial.println("  calibrate current low <A>");

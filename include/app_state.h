@@ -24,6 +24,7 @@ extern unsigned long lastScaleReadMs;
 extern int32_t lastScaleRaw;
 extern float lastScaleWeight;
 extern float lastScaleStdDev;
+extern uint32_t lastScaleWindowSampleCount;
 extern bool lastScaleSampleValid;
 
 extern String inputBuffer;

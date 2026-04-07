@@ -319,9 +319,9 @@ bool runMotorTest() {
         float sumPower = 0.0f;
         float sumRpm = 0.0f;
         float sumTemp = 0.0f;
-        float sumWeight = 0.0f;
         uint32_t sampleCount = 0;
         uint32_t scaleSampleCount = 0;
+        float sumWeight = 0.0f;
 
         unsigned long avgStart = millis();
         while (millis() - avgStart < 1000) {
@@ -353,17 +353,9 @@ bool runMotorTest() {
                 sampleCount++;
             }
 
-            while (scaleDetected && scale.available()) {
-                int32_t raw = scale.getReading();
-                float weight = rawToWeightGrams(raw);
-
-                lastScaleRaw = raw;
-                lastScaleWeight = weight;
-                lastScaleStdDev = 0.0f;
-                lastScaleReadMs = millis();
-                lastScaleSampleValid = true;
-
-                sumWeight += weight;
+            pollScale();
+            if (lastScaleSampleValid) {
+                sumWeight += lastScaleWeight;
                 scaleSampleCount++;
             }
 
@@ -407,7 +399,7 @@ bool runMotorTest() {
         Serial.print(sampleCount);
         Serial.print(" telemetry samples, ");
         Serial.print(scaleSampleCount);
-        Serial.println(" scale samples");
+        Serial.println(" filtered scale reads");
     }
 
     stopMotorSlow();

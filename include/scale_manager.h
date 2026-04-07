@@ -8,6 +8,7 @@ bool parseScaleCalibrationCommand(const String& cmd, float& outValue);
 void saveScaleCalibration();
 void loadScaleCalibration();
 float rawToWeightGrams(int32_t raw);
+uint32_t getScaleWindowSampleCount();
 bool acquireAveragedScaleSample(
     unsigned long durationMs,
     int32_t& avgRaw,
