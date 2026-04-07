@@ -471,7 +471,9 @@ bool beginWebServer() {
 
     loadWifiConfiguration();
     if (savedWifiCount > 0) {
-        startSavedWifiConnectionByIndex(0);
+        if (!startSavedWifiConnectionByIndex(0) && !startAccessPointMode()) {
+            return false;
+        }
     } else if (!startAccessPointMode()) {
         return false;
     }
@@ -498,7 +500,10 @@ void updateWebServer() {
                 Serial.print("Wi-Fi station connect timed out for ");
                 Serial.print(savedWifiSsids[connectingWifiIndex]);
                 Serial.println(". Trying next saved network.");
-                startSavedWifiConnectionByIndex(connectingWifiIndex + 1);
+                if (!startSavedWifiConnectionByIndex(connectingWifiIndex + 1)) {
+                    Serial.println("No additional saved Wi-Fi networks are currently visible. Falling back to AP mode.");
+                    startAccessPointMode();
+                }
             } else {
                 Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
                 startAccessPointMode();
