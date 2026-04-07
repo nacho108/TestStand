@@ -246,6 +246,25 @@ body::before {
   color: var(--ink);
 }
 
+.metric-row__detail {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.metric-row__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.metric-row__detail--meta {
+  flex-shrink: 0;
+  text-align: right;
+}
+
 .metric-row__health {
   display: inline-flex;
   align-items: center;

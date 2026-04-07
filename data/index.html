@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/styles.css?v=3">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -54,7 +54,10 @@
                 <span class="metric-row__label">Thrust</span>
                 <strong class="metric-row__value" id="thrust-value">--</strong>
               </div>
-              <span class="metric-row__health" id="thrust-health">Waiting for scale</span>
+              <div class="metric-row__meta">
+                <span class="metric-row__health" id="thrust-health">Waiting for scale</span>
+                <span class="metric-row__detail metric-row__detail--meta" id="thrust-stddev-value">Std dev --</span>
+              </div>
             </article>
           </div>
         </article>
@@ -170,6 +173,6 @@
     </main>
   </div>
 
-  <script src="/app.js"></script>
+  <script src="/app.js?v=3"></script>
 </body>
 </html>

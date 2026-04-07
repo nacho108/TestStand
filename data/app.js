@@ -9,6 +9,7 @@ window.addEventListener("load", () => {
     motorTemp: document.getElementById("ir-object-value"),
     ambientTemp: document.getElementById("ir-ambient-value"),
     thrust: document.getElementById("thrust-value"),
+    thrustStdDev: document.getElementById("thrust-stddev-value"),
     voltageHealth: document.getElementById("voltage-health"),
     currentHealth: document.getElementById("current-health"),
     powerHealth: document.getElementById("power-health"),
@@ -107,6 +108,7 @@ window.addEventListener("load", () => {
     setText(ui.motorTemp, formatNumber(data.ir_object_c, "deg C", 1));
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
+    setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
 
     if (hasTelemetry) {
       setHealth(ui.voltageHealth, "ESC telemetry healthy");

@@ -392,6 +392,7 @@ String buildStatusJson() {
     const float rpm = telemetryValid ? estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS) : NAN;
     const float escTemperatureC = telemetryValid ? (float)lastTlm.temperatureC : NAN;
     const float thrustGrams = lastScaleSampleValid ? lastScaleWeight : NAN;
+    const float thrustStdDevGrams = lastScaleSampleValid ? lastScaleStdDev : NAN;
     const unsigned long nowMs = millis();
 
     String json;
@@ -410,6 +411,7 @@ String buildStatusJson() {
     appendJsonBool(json, "scale_detected", scaleDetected);
     appendJsonBool(json, "scale_valid", lastScaleSampleValid);
     appendJsonFloat(json, "thrust_grams", thrustGrams, 3);
+    appendJsonFloat(json, "thrust_stddev_grams", thrustStdDevGrams, 3);
     appendJsonFloat(json, "weight_grams", thrustGrams, 3);
     appendJsonBool(json, "wifi_sta_connected", WiFi.status() == WL_CONNECTED);
     appendJsonBool(json, "wifi_ap_active", apModeActive);
@@ -452,7 +454,11 @@ bool beginWebServer() {
     }
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
-        request->send(LittleFS, "/index.html", "text/html");
+        AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/index.html", "text/html");
+        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
+        request->send(response);
     });
 
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -463,6 +469,7 @@ bool beginWebServer() {
     server.addHandler(&telemetrySocket);
 
     server.serveStatic("/", LittleFS, "/")
+        .setCacheControl("no-store, no-cache, must-revalidate")
         .setDefaultFile("index.html");
 
     server.onNotFound([](AsyncWebServerRequest* request) {
