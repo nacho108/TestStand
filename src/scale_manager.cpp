@@ -254,14 +254,14 @@ void calibrateScale(float knownWeightGrams) {
     Serial.print("Calibrating scale with ");
     Serial.print(knownWeightGrams, 3);
     Serial.println(" g...");
-    Serial.println("Averaging for 0.5 s...");
+    Serial.println("Averaging for 1.0 s...");
 
     int32_t avgRaw = 0;
     float avgWeightBefore = 0.0f;
     float stddev = 0.0f;
     uint32_t samples = 0;
 
-    if (!acquireAveragedScaleSample(SCALE_AVG_WINDOW_MS, avgRaw, avgWeightBefore, stddev, samples)) {
+    if (!acquireAveragedScaleSample(SCALE_CAL_WINDOW_MS, avgRaw, avgWeightBefore, stddev, samples)) {
         Serial.println("Scale data not ready");
         return;
     }
@@ -282,7 +282,7 @@ void calibrateScale(float knownWeightGrams) {
     float verifyWeight = 0.0f;
     float verifyStdDev = 0.0f;
     uint32_t verifySamples = 0;
-    if (!acquireAveragedScaleSample(SCALE_AVG_WINDOW_MS, verifyRaw, verifyWeight, verifyStdDev, verifySamples)) {
+    if (!acquireAveragedScaleSample(SCALE_CAL_WINDOW_MS, verifyRaw, verifyWeight, verifyStdDev, verifySamples)) {
         verifyRaw = avgRaw;
         verifyWeight = rawToWeightGrams(avgRaw);
         verifyStdDev = 0.0f;

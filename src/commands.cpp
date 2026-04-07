@@ -74,7 +74,7 @@ void printHelp() {
     Serial.println("  scale status                 -> print NAU7802 status");
     Serial.println("  scale read                   -> read averaged load cell value over 0.5 s");
     Serial.println("  scale tare                   -> tare / zero the load cell with 1 second average");
-    Serial.println("  scale calibration <grams>    -> calibrate scale using known weight in grams");
+    Serial.println("  scale calibration <grams>    -> calibrate scale using known weight in grams with 1 second average");
     Serial.println("  calibrate current low <A>");
     Serial.println("  calibrate current high <A>");
     Serial.println("  calibrate voltage low <V>");
