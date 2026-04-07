@@ -38,7 +38,8 @@ struct TestResultRow {
     float currentA = 0.0f;
     float powerW = 0.0f;
     float rpm = 0.0f;
-    float temperatureC = 0.0f;
+    float escTemperatureC = 0.0f;
+    float motorTemperatureC = 0.0f;
     float weightGrams = 0.0f;
     uint32_t sampleCount = 0;
     uint32_t scaleSampleCount = 0;

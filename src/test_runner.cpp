@@ -7,6 +7,7 @@
 #include "app_state.h"
 #include "calibration.h"
 #include "esc_telemetry.h"
+#include "ir_manager.h"
 #include "motor_control.h"
 #include "scale_manager.h"
 
@@ -33,7 +34,7 @@ bool storeTestResult(const TestResultRow& row) {
 String buildTestCsv() {
     String csv;
     csv.reserve(1024);
-    csv += "ThrottlePercent,VoltageV,CurrentA,PowerW,RPM,ESCTemperatureC,WeightGrams\n";
+    csv += "ThrottlePercent,VoltageV,CurrentA,PowerW,RPM,ESCTemperatureC,MotorTemperatureC,WeightGrams\n";
 
     for (int i = 0; i < testResultCount; i++) {
         const TestResultRow& r = testResults[i];
@@ -47,7 +48,9 @@ String buildTestCsv() {
         csv += ",";
         csv += String(r.rpm, 1);
         csv += ",";
-        csv += String(r.temperatureC, 2);
+        csv += String(r.escTemperatureC, 2);
+        csv += ",";
+        csv += String(r.motorTemperatureC, 2);
         csv += ",";
         csv += String(r.weightGrams, 3);
         csv += "\n";
@@ -318,8 +321,10 @@ bool runMotorTest() {
         float sumCurrent = 0.0f;
         float sumPower = 0.0f;
         float sumRpm = 0.0f;
-        float sumTemp = 0.0f;
+        float sumEscTemp = 0.0f;
+        float sumMotorTemp = 0.0f;
         uint32_t sampleCount = 0;
+        uint32_t motorTempSampleCount = 0;
         uint32_t scaleSampleCount = 0;
         float sumWeight = 0.0f;
 
@@ -343,14 +348,21 @@ bool runMotorTest() {
                 float currentA = getCalibratedCurrentAmps();
                 float powerW = voltageV * currentA;
                 float rpm = estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS);
-                float tempC = (float)lastTlm.temperatureC;
+                float escTempC = (float)lastTlm.temperatureC;
 
                 sumVoltage += voltageV;
                 sumCurrent += currentA;
                 sumPower += powerW;
                 sumRpm += rpm;
-                sumTemp += tempC;
+                sumEscTemp += escTempC;
                 sampleCount++;
+            }
+
+            float ambientC = NAN;
+            float objectC = NAN;
+            if (readIrTemperatures(ambientC, objectC)) {
+                sumMotorTemp += objectC;
+                motorTempSampleCount++;
             }
 
             pollScale();
@@ -373,13 +385,19 @@ bool runMotorTest() {
             row.currentA = sumCurrent / sampleCount;
             row.powerW = sumPower / sampleCount;
             row.rpm = sumRpm / sampleCount;
-            row.temperatureC = sumTemp / sampleCount;
+            row.escTemperatureC = sumEscTemp / sampleCount;
         } else {
             row.voltageV = NAN;
             row.currentA = NAN;
             row.powerW = NAN;
             row.rpm = NAN;
-            row.temperatureC = NAN;
+            row.escTemperatureC = NAN;
+        }
+
+        if (motorTempSampleCount > 0) {
+            row.motorTemperatureC = sumMotorTemp / motorTempSampleCount;
+        } else {
+            row.motorTemperatureC = NAN;
         }
 
         if (scaleSampleCount > 0) {
