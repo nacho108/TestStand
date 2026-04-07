@@ -461,6 +461,22 @@ bool beginWebServer() {
         request->send(response);
     });
 
+    server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest* request) {
+        AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/styles.css", "text/css");
+        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
+        request->send(response);
+    });
+
+    server.on("/app.js", HTTP_GET, [](AsyncWebServerRequest* request) {
+        AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/app.js", "application/javascript");
+        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
+        request->send(response);
+    });
+
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
         request->send(200, "application/json", buildStatusJson());
     });

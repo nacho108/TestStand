@@ -143,9 +143,41 @@ window.addEventListener("load", () => {
 
   let socket = null;
   let reconnectTimer = null;
+  let pollTimer = null;
 
   setView("overview");
   applyDisconnectedState();
+
+  const stopPolling = () => {
+    if (pollTimer !== null) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  };
+
+  const pollStatus = async () => {
+    try {
+      const response = await fetch("/api/status", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      applyStatus(await response.json());
+      setHealth(ui.powerHealth, "HTTP polling active", "warn");
+    } catch (error) {
+      applyDisconnectedState();
+      setHealth(ui.powerHealth, "Waiting for live feed", "error");
+    }
+  };
+
+  const startPolling = () => {
+    if (pollTimer !== null) {
+      return;
+    }
+
+    pollStatus();
+    pollTimer = window.setInterval(pollStatus, 1000);
+  };
 
   const scheduleReconnect = () => {
     if (reconnectTimer !== null) {
@@ -167,6 +199,7 @@ window.addEventListener("load", () => {
     socket = new WebSocket(`${protocol}//${window.location.host}/ws`);
 
     socket.addEventListener("open", () => {
+      stopPolling();
       applyDisconnectedState();
       setHealth(ui.powerHealth, "WebSocket connected");
     });
@@ -181,15 +214,18 @@ window.addEventListener("load", () => {
 
     socket.addEventListener("close", () => {
       applyDisconnectedState();
+      startPolling();
       scheduleReconnect();
     });
 
     socket.addEventListener("error", () => {
+      startPolling();
       if (socket) {
         socket.close();
       }
     });
   };
 
+  startPolling();
   connectWebSocket();
 });
