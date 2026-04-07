@@ -6,6 +6,7 @@
 #include "app_state.h"
 #include "esc_telemetry.h"
 #include "motor_control.h"
+#include "simulation.h"
 
 namespace {
 
@@ -114,6 +115,15 @@ void pushScaleSample(int32_t raw) {
 }
 
 void beginScaleManager() {
+    if (simulationEnabled()) {
+        clearScaleWindow();
+        scaleDetected = true;
+        updateSimulation();
+        startupAutoTarePending = false;
+        startupAutoTareCompleted = true;
+        return;
+    }
+
     scaleDetected = scale.begin();
     if (!scaleDetected) {
         clearScaleWindow();
@@ -131,6 +141,11 @@ void beginScaleManager() {
 }
 
 void pollScale() {
+    if (simulationEnabled()) {
+        updateSimulation();
+        return;
+    }
+
     while (scaleDetected && scale.available()) {
         pushScaleSample(scale.getReading());
     }
@@ -175,6 +190,10 @@ bool parseScaleCalibrationCommand(const String& cmd, float& outValue) {
 }
 
 void saveScaleCalibration() {
+    if (simulationEnabled()) {
+        return;
+    }
+
     preferences.begin("am32cli", false);
     preferences.putLong("scale_zero", (int32_t)scale.getZeroOffset());
     preferences.putFloat("scale_cal", scale.getCalibrationFactor());
@@ -182,6 +201,10 @@ void saveScaleCalibration() {
 }
 
 void loadScaleCalibration() {
+    if (simulationEnabled()) {
+        return;
+    }
+
     preferences.begin("am32cli", true);
     int32_t savedZero = preferences.getLong("scale_zero", DEFAULT_SCALE_ZERO_OFFSET);
     float savedCal = preferences.getFloat("scale_cal", DEFAULT_SCALE_CAL_FACTOR);
@@ -194,6 +217,10 @@ void loadScaleCalibration() {
 }
 
 float rawToWeightGrams(int32_t raw) {
+    if (simulationEnabled()) {
+        return (float)raw;
+    }
+
     float calFactor = scale.getCalibrationFactor();
     if (fabs(calFactor) < 0.000001f) {
         return 0.0f;
@@ -219,6 +246,41 @@ bool acquireAveragedScaleSample(
 
     if (!scaleDetected) {
         return false;
+    }
+
+    if (simulationEnabled()) {
+        unsigned long startMs = millis();
+        while (millis() - startMs < durationMs) {
+            while (Serial.available()) {
+                char c = (char)Serial.read();
+                if (c == 'X' || c == 'x') {
+                    emergencyStopRamp();
+                    return false;
+                }
+            }
+
+            pollEscTelemetry();
+            updateRamp();
+
+            avgWeight += lastScaleWeight;
+            avgRaw += lastScaleRaw;
+            stddevWeight = SENSOR_SIMULATION_SCALE_STDDEV_G;
+            sampleCount++;
+            delay(10);
+        }
+
+        if (sampleCount == 0) {
+            return false;
+        }
+
+        avgRaw /= (int32_t)sampleCount;
+        avgWeight /= (float)sampleCount;
+        lastScaleRaw = avgRaw;
+        lastScaleWeight = avgWeight;
+        lastScaleStdDev = stddevWeight;
+        lastScaleReadMs = millis();
+        lastScaleSampleValid = true;
+        return true;
     }
 
     unsigned long startMs = millis();
@@ -283,6 +345,21 @@ void printScaleStatus() {
     Serial.print("  detected: ");
     Serial.println(scaleDetected ? "yes" : "no");
 
+    if (simulationEnabled()) {
+        updateSimulation();
+        Serial.println("  source: simulation");
+        Serial.print("  last weight: ");
+        Serial.print(lastScaleWeight, 3);
+        Serial.println(" g");
+        Serial.print("  last stddev: ");
+        Serial.print(lastScaleStdDev, 3);
+        Serial.println(" g");
+        Serial.print("  last sample age: ");
+        Serial.print(millis() - lastScaleReadMs);
+        Serial.println(" ms");
+        return;
+    }
+
     if (!scaleDetected) {
         Serial.println("  error: NAU7802 not detected");
         return;
@@ -321,6 +398,16 @@ void printScaleStatus() {
 }
 
 void printScaleReading() {
+    if (simulationEnabled()) {
+        updateSimulation();
+        Serial.print("Scale simulated weight=");
+        Serial.print(lastScaleWeight, 3);
+        Serial.print(" g  stddev=");
+        Serial.print(lastScaleStdDev, 3);
+        Serial.println(" g");
+        return;
+    }
+
     if (!scaleDetected) {
         Serial.println("Scale not detected");
         return;
@@ -348,6 +435,11 @@ void printScaleReading() {
 }
 
 bool tareScale() {
+    if (simulationEnabled()) {
+        Serial.println("Scale tare is not available in simulation mode");
+        return false;
+    }
+
     if (!scaleDetected) {
         Serial.println("Scale not detected");
         return false;
@@ -383,6 +475,11 @@ bool tareScale() {
 }
 
 void calibrateScale(float knownWeightGrams) {
+    if (simulationEnabled()) {
+        Serial.println("Scale calibration is not available in simulation mode");
+        return;
+    }
+
     if (!scaleDetected) {
         Serial.println("Scale not detected");
         return;

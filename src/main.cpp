@@ -10,6 +10,7 @@
 #include "esc_telemetry.h"
 #include "ir_manager.h"
 #include "motor_control.h"
+#include "simulation.h"
 #include "scale_manager.h"
 #include "test_runner.h"
 #include "web_server.h"
@@ -52,31 +53,41 @@ void setup() {
     beginAvailableLed();
 
     if (consumeEscPassthroughRequest()) {
-        runEscPassthroughMode();
+        if (simulationEnabled()) {
+            Serial.println("Ignoring pending ESC passthrough request because sensor simulation is enabled.");
+        } else {
+            runEscPassthroughMode();
+        }
     }
 
     Serial.println();
     Serial.println("ESP32 + AM32 CLI (PWM + telemetry + scale)");
+    if (simulationEnabled()) {
+        Serial.println("Sensor simulation enabled. Real ESC, scale, and IR readings are replaced.");
+    }
 
     setCalibrationDefaults();
     loadCalibration();
+    beginSimulation();
 
     Wire.begin();
     Wire.setClock(100000);
 
     if (beginIrManager()) {
-        Serial.println("MLX90614 IR sensor detected.");
+        Serial.println(simulationEnabled() ? "MLX90614 IR sensor simulated." : "MLX90614 IR sensor detected.");
     } else {
         Serial.println("WARNING: MLX90614 IR sensor not detected.");
     }
 
     beginScaleManager();
     if (scaleDetected) {
-        Serial.println("NAU7802 scale detected.");
-        Serial.print("Scale zero offset: ");
-        Serial.println(scale.getZeroOffset());
-        Serial.print("Scale calibration factor: ");
-        Serial.println(scale.getCalibrationFactor(), 6);
+        Serial.println(simulationEnabled() ? "NAU7802 scale simulated." : "NAU7802 scale detected.");
+        if (!simulationEnabled()) {
+            Serial.print("Scale zero offset: ");
+            Serial.println(scale.getZeroOffset());
+            Serial.print("Scale calibration factor: ");
+            Serial.println(scale.getCalibrationFactor(), 6);
+        }
     } else {
         Serial.println("WARNING: NAU7802 scale not detected.");
     }

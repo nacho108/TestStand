@@ -43,3 +43,13 @@ struct TestResultRow {
     uint32_t sampleCount = 0;
     uint32_t scaleSampleCount = 0;
 };
+
+struct SimulatedSensorValues {
+    float thrustGrams = 0.0f;
+    float rpm = 0.0f;
+    float voltageV = 0.0f;
+    float currentA = 0.0f;
+    float escTemperatureC = 0.0f;
+    float motorTemperatureC = 0.0f;
+    float ambientTemperatureC = 0.0f;
+};

@@ -2,8 +2,13 @@
 
 #include "app_config.h"
 #include "app_state.h"
+#include "simulation.h"
 
 void beginEscTelemetry() {
+    if (simulationEnabled()) {
+        return;
+    }
+
     escSerial.begin(115200, SERIAL_8N1, ESC_TLM_RX_PIN, -1);
 }
 
@@ -24,6 +29,12 @@ uint8_t calculateCrc8(const uint8_t* buf, uint8_t len) {
 }
 
 bool tryReadTelemetryFrame(EscTelemetry& outTlm) {
+    if (simulationEnabled()) {
+        updateSimulation();
+        outTlm = lastTlm;
+        return outTlm.valid;
+    }
+
     static uint8_t frame[10];
 
     while (escSerial.available() >= 10) {
@@ -51,6 +62,11 @@ bool tryReadTelemetryFrame(EscTelemetry& outTlm) {
 }
 
 void pollEscTelemetry() {
+    if (simulationEnabled()) {
+        updateSimulation();
+        return;
+    }
+
     EscTelemetry tlm;
     if (tryReadTelemetryFrame(tlm)) {
         lastTlm = tlm;

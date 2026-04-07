@@ -43,6 +43,7 @@ extern RampState ramp;
 extern EscTelemetry lastTlm;
 extern LinearCalibration voltageCal;
 extern LinearCalibration currentCal;
+extern SimulatedSensorValues simulatedSensors;
 
 extern TestResultRow testResults[TEST_MAX_RESULTS];
 extern int testResultCount;

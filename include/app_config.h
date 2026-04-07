@@ -5,6 +5,11 @@
 static constexpr int ESC_PWM_PIN = 18;
 static constexpr int ESC_TLM_RX_PIN = 16;
 
+static constexpr bool ENABLE_SENSOR_SIMULATION = true;
+static constexpr unsigned long SENSOR_SIMULATION_UPDATE_MS = 50;
+static constexpr float SENSOR_SIMULATION_AMBIENT_TEMP_C = 24.0f;
+static constexpr float SENSOR_SIMULATION_SCALE_STDDEV_G = 0.0f;
+
 static constexpr int PWM_FREQ = 50;
 static constexpr int PWM_CHANNEL = 0;
 static constexpr int PWM_RESOLUTION = 16;

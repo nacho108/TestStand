@@ -3,13 +3,27 @@
 #include <math.h>
 
 #include "app_state.h"
+#include "simulation.h"
 
 bool beginIrManager() {
+    if (simulationEnabled()) {
+        irDetected = true;
+        updateSimulation();
+        return true;
+    }
+
     irDetected = irSensor.begin();
     return irDetected;
 }
 
 bool readIrTemperatures(float& ambientC, float& objectC) {
+    if (simulationEnabled()) {
+        updateSimulation();
+        ambientC = lastIrAmbientC;
+        objectC = lastIrObjectC;
+        return true;
+    }
+
     if (!irDetected) {
         return false;
     }
@@ -32,6 +46,11 @@ void printIrStatus() {
 
     Serial.print("  detected: ");
     Serial.println(irDetected ? "yes" : "no");
+
+    if (simulationEnabled()) {
+        updateSimulation();
+        Serial.println("  source: simulation");
+    }
 
     if (!irDetected) {
         Serial.println("  error: MLX90614 not detected");

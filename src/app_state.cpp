@@ -34,6 +34,7 @@ RampState ramp;
 EscTelemetry lastTlm;
 LinearCalibration voltageCal;
 LinearCalibration currentCal;
+SimulatedSensorValues simulatedSensors;
 
 TestResultRow testResults[TEST_MAX_RESULTS];
 int testResultCount = 0;
