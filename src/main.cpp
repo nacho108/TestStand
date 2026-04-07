@@ -111,6 +111,7 @@ void setup() {
 
 void loop() {
     readConsole();
+    processQueuedWebCommand();
     updateRamp();
     pollEscTelemetry();
     pollScale();

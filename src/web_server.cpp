@@ -6,9 +6,12 @@
 #include <Preferences.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <freertos/FreeRTOS.h>
 
 #include "app_state.h"
 #include "calibration.h"
+#include "commands.h"
+#include "console_ui.h"
 #include "esc_telemetry.h"
 #include "ir_manager.h"
 #include "app_config.h"
@@ -23,6 +26,9 @@ unsigned long stationConnectStartMs = 0;
 bool stationConnectAnnounced = false;
 bool stationConnectedAnnounced = false;
 bool apModeActive = false;
+portMUX_TYPE queuedWebCommandMux = portMUX_INITIALIZER_UNLOCKED;
+String queuedWebCommand;
+bool queuedWebCommandPending = false;
 
 constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 30000;
 constexpr int MAX_SCANNED_NETWORKS = 10;
@@ -448,6 +454,43 @@ void handleWebSocketEvent(
 
 }
 
+bool queueWebCommand(const String& cmd) {
+    String trimmed = cmd;
+    trimmed.trim();
+    if (trimmed.length() == 0) {
+        return false;
+    }
+
+    bool queued = false;
+    portENTER_CRITICAL(&queuedWebCommandMux);
+    if (!queuedWebCommandPending) {
+        queuedWebCommand = trimmed;
+        queuedWebCommandPending = true;
+        queued = true;
+    }
+    portEXIT_CRITICAL(&queuedWebCommandMux);
+    return queued;
+}
+
+void processQueuedWebCommand() {
+    String cmd;
+
+    portENTER_CRITICAL(&queuedWebCommandMux);
+    if (queuedWebCommandPending) {
+        cmd = queuedWebCommand;
+        queuedWebCommand = "";
+        queuedWebCommandPending = false;
+    }
+    portEXIT_CRITICAL(&queuedWebCommandMux);
+
+    if (cmd.length() == 0) {
+        return;
+    }
+
+    addCommandToHistory(cmd);
+    handleCommand(cmd);
+}
+
 bool beginWebServer() {
     if (webServerStarted) {
         return true;
@@ -479,6 +522,26 @@ bool beginWebServer() {
 
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
         request->send(200, "application/json", buildStatusJson());
+    });
+
+    server.on("/api/command", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!request->hasParam("cmd", true)) {
+            request->send(400, "application/json", "{\"ok\":false,\"error\":\"Missing cmd\"}");
+            return;
+        }
+
+        const String cmd = request->getParam("cmd", true)->value();
+        if (cmd.length() == 0) {
+            request->send(400, "application/json", "{\"ok\":false,\"error\":\"Empty cmd\"}");
+            return;
+        }
+
+        if (!queueWebCommand(cmd)) {
+            request->send(409, "application/json", "{\"ok\":false,\"error\":\"Command queue busy\"}");
+            return;
+        }
+
+        request->send(202, "application/json", "{\"ok\":true,\"queued\":true}");
     });
 
     telemetrySocket.onEvent(handleWebSocketEvent);

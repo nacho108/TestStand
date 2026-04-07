@@ -1,6 +1,7 @@
 window.addEventListener("load", () => {
   const ui = {
     viewTitle: document.getElementById("view-title"),
+    startMotorTestButton: document.getElementById("start-motor-test-button"),
     voltage: document.getElementById("voltage-value"),
     current: document.getElementById("current-value"),
     power: document.getElementById("power-value"),
@@ -144,6 +145,7 @@ window.addEventListener("load", () => {
   let socket = null;
   let reconnectTimer = null;
   let pollTimer = null;
+  let motorTestPending = false;
 
   setView("overview");
   applyDisconnectedState();
@@ -177,6 +179,49 @@ window.addEventListener("load", () => {
 
     pollStatus();
     pollTimer = window.setInterval(pollStatus, 1000);
+  };
+
+  const setMotorTestButtonState = (label, disabled = false) => {
+    if (!ui.startMotorTestButton) {
+      return;
+    }
+
+    ui.startMotorTestButton.textContent = label;
+    ui.startMotorTestButton.disabled = disabled;
+  };
+
+  const runMotorTest = async () => {
+    if (!ui.startMotorTestButton || motorTestPending) {
+      return;
+    }
+
+    motorTestPending = true;
+    setMotorTestButtonState("Starting...", true);
+
+    try {
+      const body = new URLSearchParams({ cmd: "motor test" });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      setMotorTestButtonState("Test running...", true);
+      window.setTimeout(() => {
+        motorTestPending = false;
+        setMotorTestButtonState("Start test", false);
+      }, 1500);
+    } catch (error) {
+      motorTestPending = false;
+      setMotorTestButtonState("Start test", false);
+      setHealth(ui.powerHealth, "Failed to start motor test", "error");
+    }
   };
 
   const scheduleReconnect = () => {
@@ -228,4 +273,8 @@ window.addEventListener("load", () => {
 
   startPolling();
   connectWebSocket();
+
+  if (ui.startMotorTestButton) {
+    ui.startMotorTestButton.addEventListener("click", runMotorTest);
+  }
 });

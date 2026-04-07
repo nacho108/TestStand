@@ -10,10 +10,18 @@
 #include "ir_manager.h"
 #include "motor_control.h"
 #include "scale_manager.h"
+#include "web_server.h"
 
 namespace {
 
 constexpr const char* kTestStorageDir = "/tests";
+
+void serviceTestLoop() {
+    pollEscTelemetry();
+    pollScale();
+    updateRamp();
+    updateWebServer();
+}
 
 void clearTestResults() {
     testResultCount = 0;
@@ -262,9 +270,7 @@ bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
             }
         }
 
-        pollEscTelemetry();
-        pollScale();
-        updateRamp();
+        serviceTestLoop();
         delay(5);
     }
 
@@ -371,6 +377,7 @@ bool runMotorTest() {
                 scaleSampleCount++;
             }
 
+            updateWebServer();
             updateRamp();
             delay(5);
         }
