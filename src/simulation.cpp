@@ -8,12 +8,27 @@
 
 namespace {
 
+constexpr float THRUST_NOISE_GRAMS = 1.0f;
+constexpr float THRUST_ZERO_OFFSET_NOISE_GRAMS = 0.5f;
+constexpr float RPM_NOISE = 5.0f;
+constexpr float VOLTAGE_NOISE_VOLTS = 0.1f;
+constexpr float CURRENT_NOISE_AMPS = 0.2f;
+
 float evaluateCubic(float a, float b, float c, float d, float x) {
     return ((a * x + b) * x + c) * x + d;
 }
 
 float clampToNonNegative(float value) {
     return value < 0.0f ? 0.0f : value;
+}
+
+float randomSignedNoise(float amplitude) {
+    if (amplitude <= 0.0f) {
+        return 0.0f;
+    }
+
+    long sample = random(-1000, 1001);
+    return ((float)sample / 1000.0f) * amplitude;
 }
 
 uint16_t clampToUint16FromScaled(float value, float scale) {
@@ -42,19 +57,25 @@ uint8_t clampToUint8(float value) {
 }
 
 void fillSimulatedValues(float throttle, SimulatedSensorValues& outValues) {
-    outValues.thrustGrams = clampToNonNegative(
+    const float thrustBase = clampToNonNegative(
         evaluateCubic(-8.6908e-4f, 0.4395f, 21.778f, -202.83f, throttle)
     );
+    outValues.thrustGrams = thrustBase
+        + randomSignedNoise(THRUST_NOISE_GRAMS)
+        + randomSignedNoise(THRUST_ZERO_OFFSET_NOISE_GRAMS);
     outValues.rpm = throttle <= 0.0f
         ? 0.0f
         : clampToNonNegative(
             evaluateCubic(2.3329e-4f, -0.1905f, 63.682f, 25.633f, throttle)
+            + randomSignedNoise(RPM_NOISE)
         );
     outValues.voltageV = clampToNonNegative(
         evaluateCubic(-5.1282e-7f, -1.2826e-4f, 7.9895e-4f, 25.031f, throttle)
+        + randomSignedNoise(VOLTAGE_NOISE_VOLTS)
     );
     outValues.currentA = clampToNonNegative(
         evaluateCubic(2.2403e-5f, 8.5542e-4f, 0.04027f, -0.476f, throttle)
+        + randomSignedNoise(CURRENT_NOISE_AMPS)
     );
     outValues.escTemperatureC = clampToNonNegative(
         evaluateCubic(-6.3131e-5f, 0.01636f, -0.3891f, 28.50f, throttle)
@@ -101,6 +122,7 @@ void beginSimulation() {
         return;
     }
 
+    randomSeed(micros());
     updateSimulation();
 }
 
