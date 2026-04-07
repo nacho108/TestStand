@@ -344,7 +344,10 @@ void tareScale() {
 
     Serial.print("Scale tared using ");
     Serial.print(samples);
-    Serial.println(" samples");
+    Serial.print(" samples");
+    Serial.print("  stddev=");
+    Serial.print(stddev, 3);
+    Serial.println(" g");
 
     Serial.print("New zero offset = ");
     Serial.println(avgRaw);
@@ -402,6 +405,9 @@ void calibrateScale(float knownWeightGrams) {
 
     Serial.print("Scale calibrated with ");
     Serial.print(knownWeightGrams, 3);
+    Serial.print(" g");
+    Serial.print("  stddev=");
+    Serial.print(stddev, 3);
     Serial.println(" g");
 
     Serial.print("  averaged raw reading: ");
