@@ -23,6 +23,8 @@ size_t scaleWindowCount = 0;
 int64_t scaleWindowRawSum = 0;
 double scaleWindowWeightSum = 0.0;
 double scaleWindowWeightSqSum = 0.0;
+bool startupAutoTarePending = false;
+bool startupAutoTareCompleted = false;
 
 void clearScaleWindow() {
     scaleWindowHead = 0;
@@ -115,6 +117,8 @@ void beginScaleManager() {
     scaleDetected = scale.begin();
     if (!scaleDetected) {
         clearScaleWindow();
+        startupAutoTarePending = false;
+        startupAutoTareCompleted = false;
         return;
     }
 
@@ -122,6 +126,8 @@ void beginScaleManager() {
     scale.calibrateAFE();
     loadScaleCalibration();
     clearScaleWindow();
+    startupAutoTarePending = true;
+    startupAutoTareCompleted = false;
 }
 
 void pollScale() {
@@ -131,6 +137,28 @@ void pollScale() {
 
     if (scaleDetected) {
         refreshScaleWindowOutputs(millis());
+    }
+
+    if (!scaleDetected || !startupAutoTarePending || startupAutoTareCompleted) {
+        return;
+    }
+
+    if (!lastScaleSampleValid) {
+        return;
+    }
+
+    if (lastScaleWindowSampleCount < SCALE_STARTUP_STABLE_MIN_SAMPLES) {
+        return;
+    }
+
+    if (lastScaleStdDev > SCALE_STARTUP_STABLE_STDDEV_G) {
+        return;
+    }
+
+    Serial.println("Scale startup auto-tare: stable readings detected.");
+    if (tareScale()) {
+        startupAutoTarePending = false;
+        startupAutoTareCompleted = true;
     }
 }
 
@@ -319,10 +347,10 @@ void printScaleReading() {
     Serial.println(" ms");
 }
 
-void tareScale() {
+bool tareScale() {
     if (!scaleDetected) {
         Serial.println("Scale not detected");
-        return;
+        return false;
     }
 
     Serial.println("Taring scale (1 second average)...");
@@ -334,7 +362,7 @@ void tareScale() {
 
     if (!acquireAveragedScaleSample(SCALE_TARE_WINDOW_MS, avgRaw, avgWeight, stddev, samples)) {
         Serial.println("Failed to read scale for tare");
-        return;
+        return false;
     }
 
     scale.setZeroOffset(avgRaw);
@@ -351,6 +379,7 @@ void tareScale() {
 
     Serial.print("New zero offset = ");
     Serial.println(avgRaw);
+    return true;
 }
 
 void calibrateScale(float knownWeightGrams) {

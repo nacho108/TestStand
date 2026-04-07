@@ -14,6 +14,8 @@ static constexpr int32_t DEFAULT_SCALE_ZERO_OFFSET = 0;
 static constexpr unsigned long SCALE_AVG_WINDOW_MS = 500;
 static constexpr unsigned long SCALE_CAL_WINDOW_MS = 1000;
 static constexpr unsigned long SCALE_TARE_WINDOW_MS = 1000;
+static constexpr uint32_t SCALE_STARTUP_STABLE_MIN_SAMPLES = 50;
+static constexpr float SCALE_STARTUP_STABLE_STDDEV_G = 2.0f;
 
 static constexpr int CLI_HISTORY_SIZE = 10;
 

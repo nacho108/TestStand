@@ -18,5 +18,5 @@ bool acquireAveragedScaleSample(
 );
 void printScaleStatus();
 void printScaleReading();
-void tareScale();
+bool tareScale();
 void calibrateScale(float knownWeightGrams);
