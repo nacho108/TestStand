@@ -4,6 +4,22 @@
 #include "app_state.h"
 #include "simulation.h"
 
+namespace {
+
+constexpr size_t kTelemetryFrameSize = 10;
+
+void decodeTelemetryFrame(const uint8_t* frame, EscTelemetry& outTlm) {
+    outTlm.valid = true;
+    outTlm.temperatureC = frame[0];
+    outTlm.voltageRaw = (uint16_t(frame[1]) << 8) | frame[2];
+    outTlm.currentRaw = (uint16_t(frame[3]) << 8) | frame[4];
+    outTlm.consumptionRaw = (uint16_t(frame[5]) << 8) | frame[6];
+    outTlm.rpmField = (uint16_t(frame[7]) << 8) | frame[8];
+    outTlm.lastUpdateMs = millis();
+}
+
+}  // namespace
+
 void beginEscTelemetry() {
     if (simulationEnabled()) {
         return;
@@ -35,30 +51,37 @@ bool tryReadTelemetryFrame(EscTelemetry& outTlm) {
         return outTlm.valid;
     }
 
-    static uint8_t frame[10];
+    static uint8_t frame[kTelemetryFrameSize];
+    static size_t frameFill = 0;
+    bool foundFrame = false;
 
-    while (escSerial.available() >= 10) {
-        size_t bytesRead = escSerial.readBytes(frame, 10);
-        if (bytesRead != 10) {
-            return false;
+    while (escSerial.available() > 0) {
+        int nextByte = escSerial.read();
+        if (nextByte < 0) {
+            break;
         }
 
-        uint8_t crc = calculateCrc8(frame, 9);
-        if (crc != frame[9]) {
+        if (frameFill < kTelemetryFrameSize) {
+            frame[frameFill++] = (uint8_t)nextByte;
+        } else {
+            memmove(frame, frame + 1, kTelemetryFrameSize - 1);
+            frame[kTelemetryFrameSize - 1] = (uint8_t)nextByte;
+        }
+
+        if (frameFill < kTelemetryFrameSize) {
             continue;
         }
 
-        outTlm.valid = true;
-        outTlm.temperatureC = frame[0];
-        outTlm.voltageRaw = (uint16_t(frame[1]) << 8) | frame[2];
-        outTlm.currentRaw = (uint16_t(frame[3]) << 8) | frame[4];
-        outTlm.consumptionRaw = (uint16_t(frame[5]) << 8) | frame[6];
-        outTlm.rpmField = (uint16_t(frame[7]) << 8) | frame[8];
-        outTlm.lastUpdateMs = millis();
-        return true;
+        uint8_t crc = calculateCrc8(frame, kTelemetryFrameSize - 1);
+        if (crc != frame[kTelemetryFrameSize - 1]) {
+            continue;
+        }
+
+        decodeTelemetryFrame(frame, outTlm);
+        foundFrame = true;
     }
 
-    return false;
+    return foundFrame;
 }
 
 void pollEscTelemetry() {

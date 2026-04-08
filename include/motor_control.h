@@ -14,6 +14,7 @@ void stopMotorSlow();
 void emergencyStopRamp();
 void startMotorAtFivePercent();
 void rampToFullPower();
+void requestBoardRestart();
 void requestEscPassthroughModeAndRestart();
 bool consumeEscPassthroughRequest();
 void runEscPassthroughMode();

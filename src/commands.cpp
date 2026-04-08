@@ -63,6 +63,7 @@ void printHelp() {
     Serial.println("  test list                    -> list saved test CSV files in LittleFS");
     Serial.println("  test get <filename>          -> print a saved test CSV file");
     Serial.println("  test remove <filename>       -> delete a saved test CSV file");
+    Serial.println("  restart                      -> reboot the ESP32 board");
     Serial.println("  pass                         -> reboot into ESC passthrough mode");
     Serial.println("  esc params                   -> read one AM32 ESC parameter with debug output");
     Serial.println("  esc dump                     -> read and print the full AM32 EEPROM region");
@@ -161,6 +162,11 @@ void handleCommand(String cmd) {
 
     if (parseFilenameArgument(cmd, "test remove ", filename)) {
         removeSavedTest(filename);
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("restart") || cmd.equalsIgnoreCase("reset")) {
+        requestBoardRestart();
         return;
     }
 

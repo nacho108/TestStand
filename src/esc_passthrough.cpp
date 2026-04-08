@@ -1160,6 +1160,15 @@ void requestEscPassthroughModeAndRestart() {
     ESP.restart();
 }
 
+void requestBoardRestart() {
+    cancelRamp();
+    writeThrottlePercent(0.0f);
+
+    Serial.println("Restarting ESP32 board...");
+    delay(100);
+    ESP.restart();
+}
+
 bool consumeEscPassthroughRequest() {
     preferences.begin("am32cli", false);
     bool shouldEnter = preferences.getBool(PASSTHROUGH_PREF_KEY, false);
