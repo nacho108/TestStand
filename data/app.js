@@ -217,6 +217,13 @@ window.addEventListener("load", () => {
     const hasIr = Boolean(data.ir_detected);
     const hasScale = Boolean(data.scale_detected);
     const scaleReady = hasScale && Boolean(data.scale_valid);
+    const resultCount = Number(data.test_result_count) || 0;
+    const hasInlineResults = Array.isArray(data.test_results);
+
+    if (hasInlineResults) {
+      cachedTestResults = data.test_results;
+      cachedTestResultCount = resultCount;
+    }
 
     setText(ui.voltage, formatNumber(data.voltage_v, "V", 3));
     setText(ui.current, formatNumber(data.current_a, "A", 3));
@@ -229,7 +236,7 @@ window.addEventListener("load", () => {
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
-    updateTestChart(data.test_results);
+    updateTestChart(cachedTestResults);
 
     if (Boolean(data.test_running)) {
       motorTestPending = true;
@@ -272,12 +279,19 @@ window.addEventListener("load", () => {
       setHealth(ui.motorTempHealth, "IR sensor offline", "error");
       setHealth(ui.ambientTempHealth, "IR sensor offline", "error");
     }
+
+    return {
+      resultCount,
+      hasInlineResults
+    };
   };
 
   let socket = null;
   let reconnectTimer = null;
   let pollTimer = null;
   let motorTestPending = false;
+  let cachedTestResults = [];
+  let cachedTestResultCount = 0;
 
   setView("overview");
   applyDisconnectedState();
@@ -329,6 +343,8 @@ window.addEventListener("load", () => {
 
     motorTestPending = true;
     setMotorTestButtonState("Starting...", true);
+    cachedTestResults = [];
+    cachedTestResultCount = 0;
     updateTestChart([]);
 
     try {
@@ -381,7 +397,12 @@ window.addEventListener("load", () => {
     socket.addEventListener("message", (event) => {
       try {
         const data = JSON.parse(event.data);
-        applyStatus(data);
+        const statusInfo = applyStatus(data);
+        if (statusInfo.resultCount !== cachedTestResultCount ||
+            (!statusInfo.hasInlineResults && statusInfo.resultCount > 0 && cachedTestResults.length === 0)) {
+          cachedTestResultCount = statusInfo.resultCount;
+          pollStatus();
+        }
         if (!data.test_running) {
           motorTestPending = false;
           setMotorTestButtonState("Start test", false);

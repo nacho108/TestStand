@@ -407,7 +407,7 @@ void appendJsonTestResults(String& json, bool withComma = true) {
     }
 }
 
-String buildStatusJson() {
+String buildStatusJson(bool includeTestResults = true) {
     float irAmbient = lastIrAmbientC;
     float irObject = lastIrObjectC;
 
@@ -431,7 +431,7 @@ String buildStatusJson() {
     const unsigned long nowMs = millis();
 
     String json;
-    json.reserve(2048);
+    json.reserve(includeTestResults ? 2048 : 512);
     json += "{";
     appendJsonUnsigned(json, "timestamp_ms", nowMs);
     appendJsonBool(json, "telemetry_valid", telemetryValid);
@@ -455,8 +455,10 @@ String buildStatusJson() {
     appendJsonUnsigned(json, "scale_last_read_ms", lastScaleReadMs);
     appendJsonUnsigned(json, "ir_last_read_ms", lastIrReadMs);
     appendJsonBool(json, "test_running", testRunning);
-    appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount);
-    appendJsonTestResults(json, false);
+    appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
+    if (includeTestResults) {
+        appendJsonTestResults(json, false);
+    }
     json += "}";
     return json;
 }
@@ -475,7 +477,7 @@ void handleWebSocketEvent(
     (void)len;
 
     if (type == WS_EVT_CONNECT) {
-        client->text(buildStatusJson());
+        client->text(buildStatusJson(false));
         return;
     }
 
@@ -638,7 +640,7 @@ void updateWebServer() {
     }
 
     lastTelemetryBroadcastMs = nowMs;
-    telemetrySocket.textAll(buildStatusJson());
+    telemetrySocket.textAll(buildStatusJson(false));
 }
 
 void beginWifiSelection() {
