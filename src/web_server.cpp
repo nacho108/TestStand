@@ -45,8 +45,33 @@ String savedWifiSsids[MAX_SAVED_WIFI_NETWORKS];
 String savedWifiPasswords[MAX_SAVED_WIFI_NETWORKS];
 int savedWifiCount = 0;
 int connectingWifiIndex = -1;
+bool webUiAssetsReady = false;
 
 void ensureScanCapableWifiMode();
+
+bool checkWebUiAsset(const char* path) {
+    if (LittleFS.exists(path)) {
+        return true;
+    }
+
+    Serial.print("Missing LittleFS web asset: ");
+    Serial.println(path);
+    return false;
+}
+
+bool validateWebUiAssets() {
+    bool ok = true;
+    ok = checkWebUiAsset("/index.html") && ok;
+    ok = checkWebUiAsset("/styles.css") && ok;
+    ok = checkWebUiAsset("/app.js") && ok;
+
+    if (!ok) {
+        Serial.println("Web UI files are missing from LittleFS.");
+        Serial.println("Rebuild and upload the filesystem image with the PlatformIO 'Upload Filesystem Image' task.");
+    }
+
+    return ok;
+}
 
 String makeWifiSsidKey(int index) {
     return "wifi_ssid_" + String(index);
@@ -532,7 +557,15 @@ bool beginWebServer() {
         return true;
     }
 
+    webUiAssetsReady = validateWebUiAssets();
+
     server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!webUiAssetsReady) {
+            request->send(503,
+                          "text/plain",
+                          "Web UI files are missing from LittleFS. Upload the filesystem image and reboot.");
+            return;
+        }
         AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/index.html", "text/html");
         response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response->addHeader("Pragma", "no-cache");
@@ -541,6 +574,10 @@ bool beginWebServer() {
     });
 
     server.on("/styles.css", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!webUiAssetsReady) {
+            request->send(404, "text/plain", "styles.css is missing from LittleFS");
+            return;
+        }
         AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/styles.css", "text/css");
         response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response->addHeader("Pragma", "no-cache");
@@ -549,11 +586,31 @@ bool beginWebServer() {
     });
 
     server.on("/app.js", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!webUiAssetsReady) {
+            request->send(404, "text/plain", "app.js is missing from LittleFS");
+            return;
+        }
         AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/app.js", "application/javascript");
         response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
         response->addHeader("Pragma", "no-cache");
         response->addHeader("Expires", "0");
         request->send(response);
+    });
+
+    server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (LittleFS.exists("/favicon.ico")) {
+            request->send(LittleFS, "/favicon.ico", "image/x-icon");
+            return;
+        }
+
+        if (LittleFS.exists("/favicon.ico.gz")) {
+            AsyncWebServerResponse* response = request->beginResponse(LittleFS, "/favicon.ico.gz", "image/x-icon");
+            response->addHeader("Content-Encoding", "gzip");
+            request->send(response);
+            return;
+        }
+
+        request->send(204);
     });
 
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
@@ -583,9 +640,11 @@ bool beginWebServer() {
     telemetrySocket.onEvent(handleWebSocketEvent);
     server.addHandler(&telemetrySocket);
 
-    server.serveStatic("/", LittleFS, "/")
-        .setCacheControl("no-store, no-cache, must-revalidate")
-        .setDefaultFile("index.html");
+    if (webUiAssetsReady) {
+        server.serveStatic("/", LittleFS, "/")
+            .setCacheControl("no-store, no-cache, must-revalidate")
+            .setDefaultFile("index.html");
+    }
 
     server.onNotFound([](AsyncWebServerRequest* request) {
         request->send(404, "text/plain", "Not found");
