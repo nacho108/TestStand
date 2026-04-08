@@ -9,6 +9,7 @@ void processQueuedWebCommand();
 void beginWifiSelection();
 void beginWifiForget();
 void reconnectSavedWifi();
+void forceAccessPointMode();
 bool handleWifiSelectionInput(const String& input);
 bool wifiSelectionPending();
 void printWifiStatus();

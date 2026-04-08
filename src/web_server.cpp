@@ -824,6 +824,19 @@ void reconnectSavedWifi() {
     }
 }
 
+void forceAccessPointMode() {
+    wifiSelectionIndexPending = false;
+    wifiSelectionPasswordPending = false;
+    wifiForgetIndexPending = false;
+    pendingWifiSsid = "";
+
+    if (startAccessPointMode()) {
+        Serial.println("Forced Wi-Fi AP mode.");
+    } else {
+        Serial.println("WARNING: Failed to force Wi-Fi AP mode.");
+    }
+}
+
 void printWifiStatus() {
     loadWifiConfiguration();
 

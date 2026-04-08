@@ -86,6 +86,7 @@ void printHelp() {
     Serial.println("  ir read                      -> read ambient and object temperatures");
     Serial.println("  wifi select                  -> scan networks, choose by number, then enter password");
     Serial.println("  wifi connect                 -> retry connecting to saved Wi-Fi networks");
+    Serial.println("  wifi ap                      -> force Wi-Fi access point mode immediately");
     Serial.println("  wifi forget                  -> list saved networks and choose one to remove");
     Serial.println("  wifi status                  -> print current Wi-Fi mode, connection, and saved networks");
     Serial.println("  help");
@@ -95,6 +96,11 @@ void handleCommand(String cmd) {
     cmd.trim();
 
     if (cmd.length() == 0) {
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("wifi ap")) {
+        forceAccessPointMode();
         return;
     }
 
