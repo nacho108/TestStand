@@ -11,6 +11,7 @@ namespace {
 
 constexpr unsigned long ESC_BOOTLOADER_BAUD = 19200;
 const char* PASSTHROUGH_PREF_KEY = "pt_once";
+const char* MOTOR_POLES_PREF_KEY = "motor_poles";
 
 EspSoftwareSerial::UART escPassthroughSerial;
 bool enable4Way = false;
@@ -82,6 +83,7 @@ constexpr uint8_t ESC_LEGACY_EEPROM_WRITE_SIZE = 176;
 constexpr uint8_t ESC_LEGACY_NAME_OFFSET = 5;
 constexpr uint8_t ESC_LEGACY_NAME_LENGTH = 12;
 constexpr uint8_t ESC_LEGACY_DIR_REVERSED_OFFSET = 17;
+constexpr uint8_t ESC_LEGACY_MOTOR_POLES_OFFSET = 27;
 
 struct EscBootInfo {
     uint8_t pinCode = 0;
@@ -100,6 +102,16 @@ void deinitEscSerial();
 uint16_t sendEsc(uint8_t txBuf[], uint16_t bufSize, bool sendCrc);
 uint16_t getEsc(uint8_t rxBuf[], uint16_t waitMs);
 void prepareEscDirectSession();
+
+bool isValidMotorPoleCount(int poleCount) {
+    return poleCount >= 2 && poleCount <= 100;
+}
+
+void saveMotorPoleCount() {
+    preferences.begin("am32cli", false);
+    preferences.putInt(MOTOR_POLES_PREF_KEY, motorPoleCount);
+    preferences.end();
+}
 
 uint16_t byteCrc(uint8_t data, uint16_t crc) {
     uint8_t xb = data;
@@ -1160,6 +1172,19 @@ void requestEscPassthroughModeAndRestart() {
     ESP.restart();
 }
 
+void loadMotorPoleCount() {
+    preferences.begin("am32cli", true);
+    const int storedValue = preferences.getInt(MOTOR_POLES_PREF_KEY, DEFAULT_MOTOR_POLES);
+    preferences.end();
+
+    motorPoleCount = isValidMotorPoleCount(storedValue) ? storedValue : DEFAULT_MOTOR_POLES;
+}
+
+void printMotorPoleCount() {
+    Serial.print("Motor poles: ");
+    Serial.println(motorPoleCount);
+}
+
 void requestBoardRestart() {
     cancelRamp();
     writeThrottlePercent(0.0f);
@@ -1439,4 +1464,118 @@ void toggleEscDirectionReverseDebug() {
 
     restoreEscCliSession();
     Serial.println("ESC reverse: passthrough session closed.");
+}
+
+void setEscMotorPolesAndSync(int poleCount) {
+    if (!isValidMotorPoleCount(poleCount)) {
+        Serial.println("ESC poles: value must be between 2 and 100.");
+        return;
+    }
+
+    bool shouldResetEsc = false;
+
+    Serial.println();
+    Serial.print("ESC poles: setting motor_poles to ");
+    Serial.println(poleCount);
+    Serial.println("Reading the legacy EEPROM block, writing byte 27, then verifying.");
+
+    EscBootInfo bootInfo;
+    uint8_t eepromData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+    bool updateSucceeded = false;
+
+    do {
+        if (!beginEscDebugSession(bootInfo, shouldResetEsc)) {
+            break;
+        }
+
+        uint16_t payloadLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               eepromData,
+                               sizeof(eepromData),
+                               payloadLength,
+                               true)) {
+            break;
+        }
+
+        if (payloadLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.print("ESC poles: expected ");
+            Serial.print(ESC_LEGACY_EEPROM_WRITE_SIZE);
+            Serial.print(" EEPROM bytes but got ");
+            Serial.println(payloadLength);
+            break;
+        }
+
+        Serial.println("EEPROM summary before write:");
+        printEscEepromSummary(eepromData, payloadLength);
+
+        if (eepromData[1] >= 3) {
+            Serial.println("ESC poles: refusing to write modern EEPROM layouts until their write path is mapped.");
+            break;
+        }
+
+        const uint8_t oldRaw = eepromData[ESC_LEGACY_MOTOR_POLES_OFFSET];
+        const uint8_t newRaw = (uint8_t)poleCount;
+
+        Serial.print("motor_poles raw before write: ");
+        Serial.println(oldRaw);
+        Serial.print("motor_poles raw after write: ");
+        Serial.println(newRaw);
+
+        eepromData[ESC_LEGACY_MOTOR_POLES_OFFSET] = newRaw;
+
+        if (!writeEscFlashBlock(bootInfo.encodedEepromAddress,
+                                eepromData,
+                                ESC_LEGACY_EEPROM_WRITE_SIZE,
+                                true)) {
+            break;
+        }
+
+        uint8_t verifyData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+        uint16_t verifyLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               verifyData,
+                               sizeof(verifyData),
+                               verifyLength,
+                               true)) {
+            Serial.println("ESC poles: write completed, but read-back verification failed.");
+            break;
+        }
+
+        if (verifyLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.println("ESC poles: verification read length was unexpected.");
+            break;
+        }
+
+        Serial.println("EEPROM summary after write:");
+        printEscEepromSummary(verifyData, verifyLength);
+
+        const uint8_t verifyRaw = verifyData[ESC_LEGACY_MOTOR_POLES_OFFSET];
+        if (verifyRaw != newRaw) {
+            Serial.print("ESC poles: verification mismatch, expected raw=");
+            Serial.print(newRaw);
+            Serial.print(" but read back ");
+            Serial.println(verifyRaw);
+            break;
+        }
+
+        motorPoleCount = poleCount;
+        saveMotorPoleCount();
+        updateSucceeded = true;
+
+        Serial.print("ESC poles: motor_poles updated successfully to ");
+        Serial.println(motorPoleCount);
+    } while (false);
+
+    if (shouldResetEsc) {
+        resetEscAfterDebugRead();
+    }
+
+    restoreEscCliSession();
+    Serial.println("ESC poles: passthrough session closed.");
+
+    if (updateSucceeded) {
+        printMotorPoleCount();
+    }
 }

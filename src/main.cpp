@@ -68,6 +68,7 @@ void setup() {
 
     setCalibrationDefaults();
     loadCalibration();
+    loadMotorPoleCount();
     beginSimulation();
 
     Wire.begin();
@@ -106,6 +107,7 @@ void setup() {
     Serial.println("Ready.");
     printHelp();
     printCalibrationStatus();
+    printMotorPoleCount();
     showPrompt();
 }
 

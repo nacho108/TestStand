@@ -21,6 +21,40 @@ bool parseFilenameArgument(const String& cmd, const char* prefix, String& filena
     return true;
 }
 
+bool parseIntegerArgument(const String& cmd, const char* prefix, int& value) {
+    if (!cmd.startsWith(prefix)) {
+        return false;
+    }
+
+    String valueText = cmd.substring(strlen(prefix));
+    valueText.trim();
+    if (valueText.length() == 0) {
+        return false;
+    }
+
+    bool hasDigit = false;
+    for (size_t i = 0; i < valueText.length(); ++i) {
+        const char c = valueText.charAt(i);
+        if (c >= '0' && c <= '9') {
+            hasDigit = true;
+            continue;
+        }
+
+        if (i == 0 && (c == '+' || c == '-')) {
+            continue;
+        }
+
+        return false;
+    }
+
+    if (!hasDigit) {
+        return false;
+    }
+
+    value = valueText.toInt();
+    return true;
+}
+
 void handlePendingTestSaveCommand(const String& cmd) {
     if (testSavePromptPending) {
         if (cmd.equalsIgnoreCase("yes")) {
@@ -68,6 +102,7 @@ void printHelp() {
     Serial.println("  esc params                   -> read one AM32 ESC parameter with debug output");
     Serial.println("  esc dump                     -> read and print the full AM32 EEPROM region");
     Serial.println("  esc reverse                  -> toggle the AM32 dir_reversed parameter");
+    Serial.println("  esc poles <value>            -> write ESC motor pole count and use it in RPM calculations");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
     Serial.println("  telemetry on                 -> start periodic telemetry output");
@@ -193,6 +228,12 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("esc reverse")) {
         toggleEscDirectionReverseDebug();
+        return;
+    }
+
+    int poleCount = 0;
+    if (parseIntegerArgument(cmd, "esc poles ", poleCount)) {
+        setEscMotorPolesAndSync(poleCount);
         return;
     }
 

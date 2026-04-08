@@ -94,7 +94,7 @@ void writeSimulationToSharedState(const SimulatedSensorValues& values, unsigned 
     lastTlm.voltageRaw = clampToUint16FromScaled(values.voltageV, 100.0f);
     lastTlm.currentRaw = clampToUint16FromScaled(values.currentA, 100.0f);
     lastTlm.consumptionRaw = 0;
-    lastTlm.rpmField = clampToUint16FromScaled(values.rpm * (MOTOR_MAGNETS / 2.0f), 0.01f);
+    lastTlm.rpmField = clampToUint16FromScaled(values.rpm * (motorPoleCount / 2.0f), 0.01f);
     lastTlm.lastUpdateMs = nowMs;
 
     irDetected = true;

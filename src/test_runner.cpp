@@ -353,7 +353,7 @@ bool runMotorTest() {
                 float voltageV = getCalibratedVoltageVolts();
                 float currentA = getCalibratedCurrentAmps();
                 float powerW = voltageV * currentA;
-                float rpm = estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS);
+                float rpm = estimateMechanicalRpm(lastTlm.rpmField, motorPoleCount);
                 float escTempC = (float)lastTlm.temperatureC;
 
                 sumVoltage += voltageV;

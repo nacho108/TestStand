@@ -19,7 +19,7 @@ void printTelemetryLine() {
     float voltageV = getCalibratedVoltageVolts();
     float currentA = getCalibratedCurrentAmps();
     float powerW = getCalibratedPowerWatts();
-    float rpmEst = estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS);
+    float rpmEst = estimateMechanicalRpm(lastTlm.rpmField, motorPoleCount);
 
     Serial.print("V=");
     Serial.print(voltageV, 2);
@@ -43,6 +43,9 @@ void printStatus() {
     Serial.print(throttlePercent, 1);
     Serial.println("%");
 
+    Serial.print("Motor poles: ");
+    Serial.println(motorPoleCount);
+
     Serial.print("Ramp active: ");
     Serial.println(ramp.active ? "yes" : "no");
 
@@ -57,7 +60,7 @@ void printStatus() {
     float voltageV = getCalibratedVoltageVolts();
     float currentA = getCalibratedCurrentAmps();
     float powerW = getCalibratedPowerWatts();
-    float rpmEst = estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS);
+    float rpmEst = estimateMechanicalRpm(lastTlm.rpmField, motorPoleCount);
 
     Serial.print("Voltage: ");
     Serial.print(voltageV, 3);

@@ -21,3 +21,6 @@ void runEscPassthroughMode();
 void readEscParametersDebug();
 void dumpEscEepromDebug();
 void toggleEscDirectionReverseDebug();
+void loadMotorPoleCount();
+void printMotorPoleCount();
+void setEscMotorPolesAndSync(int poleCount);

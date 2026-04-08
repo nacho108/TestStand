@@ -424,7 +424,7 @@ String buildStatusJson(bool includeTestResults = true) {
     const float voltageV = telemetryValid ? getCalibratedVoltageVolts() : NAN;
     const float currentA = telemetryValid ? getCalibratedCurrentAmps() : NAN;
     const float powerW = telemetryValid ? getCalibratedPowerWatts() : NAN;
-    const float rpm = telemetryValid ? estimateMechanicalRpm(lastTlm.rpmField, MOTOR_MAGNETS) : NAN;
+    const float rpm = telemetryValid ? estimateMechanicalRpm(lastTlm.rpmField, motorPoleCount) : NAN;
     const float escTemperatureC = telemetryValid ? (float)lastTlm.temperatureC : NAN;
     const float thrustGrams = lastScaleSampleValid ? lastScaleWeight : NAN;
     const float thrustStdDevGrams = lastScaleSampleValid ? lastScaleStdDev : NAN;
@@ -455,6 +455,7 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonUnsigned(json, "scale_last_read_ms", lastScaleReadMs);
     appendJsonUnsigned(json, "ir_last_read_ms", lastIrReadMs);
     appendJsonBool(json, "test_running", testRunning);
+    appendJsonUnsigned(json, "motor_poles", (unsigned long)motorPoleCount);
     appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
     if (includeTestResults) {
         appendJsonTestResults(json, false);

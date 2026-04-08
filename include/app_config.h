@@ -29,7 +29,7 @@ static constexpr float DEFAULT_VOLTAGE_OFFSET = 0.0f;
 static constexpr float DEFAULT_CURRENT_SCALE = 1.0f;
 static constexpr float DEFAULT_CURRENT_OFFSET = 0.0f;
 
-static constexpr int MOTOR_MAGNETS = 28;
+static constexpr int DEFAULT_MOTOR_POLES = 28;
 
 static constexpr int TEST_STEP_PERCENT = 5;
 static constexpr int TEST_MAX_RESULTS = 21;
