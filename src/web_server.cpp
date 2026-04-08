@@ -801,6 +801,29 @@ bool wifiSelectionPending() {
     return wifiSelectionIndexPending || wifiSelectionPasswordPending || wifiForgetIndexPending;
 }
 
+void reconnectSavedWifi() {
+    wifiSelectionIndexPending = false;
+    wifiSelectionPasswordPending = false;
+    wifiForgetIndexPending = false;
+    pendingWifiSsid = "";
+
+    loadWifiConfiguration();
+    if (savedWifiCount == 0) {
+        Serial.println("No saved Wi-Fi networks. Use 'wifi select' first.");
+        return;
+    }
+
+    Serial.println("Trying saved Wi-Fi networks...");
+    if (startSavedWifiConnectionByIndex(0)) {
+        return;
+    }
+
+    Serial.println("No saved Wi-Fi networks are currently visible. Staying in AP mode.");
+    if (!apModeActive) {
+        startAccessPointMode();
+    }
+}
+
 void printWifiStatus() {
     loadWifiConfiguration();
 

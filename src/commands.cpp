@@ -84,6 +84,7 @@ void printHelp() {
     Serial.println("  ir status                    -> print MLX90614 status");
     Serial.println("  ir read                      -> read ambient and object temperatures");
     Serial.println("  wifi select                  -> scan networks, choose by number, then enter password");
+    Serial.println("  wifi connect                 -> retry connecting to saved Wi-Fi networks");
     Serial.println("  wifi forget                  -> list saved networks and choose one to remove");
     Serial.println("  wifi status                  -> print current Wi-Fi mode, connection, and saved networks");
     Serial.println("  help");
@@ -292,6 +293,11 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("wifi select")) {
         beginWifiSelection();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("wifi connect")) {
+        reconnectSavedWifi();
         return;
     }
 
