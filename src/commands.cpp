@@ -103,6 +103,7 @@ void printHelp() {
     Serial.println("  esc dump                     -> read and print the full AM32 EEPROM region");
     Serial.println("  esc reverse                  -> toggle the AM32 dir_reversed parameter");
     Serial.println("  esc poles <value>            -> write ESC motor pole count and use it in RPM calculations");
+    Serial.println("  esc kv <value>               -> write ESC motor KV estimate");
     Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
     Serial.println("  status                       -> print latest telemetry once");
     Serial.println("  telemetry on                 -> start periodic telemetry output");
@@ -234,6 +235,12 @@ void handleCommand(String cmd) {
     int poleCount = 0;
     if (parseIntegerArgument(cmd, "esc poles ", poleCount)) {
         setEscMotorPolesAndSync(poleCount);
+        return;
+    }
+
+    int motorKv = 0;
+    if (parseIntegerArgument(cmd, "esc kv ", motorKv)) {
+        setEscMotorKv(motorKv);
         return;
     }
 

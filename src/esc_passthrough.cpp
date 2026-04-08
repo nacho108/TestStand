@@ -83,6 +83,7 @@ constexpr uint8_t ESC_LEGACY_EEPROM_WRITE_SIZE = 176;
 constexpr uint8_t ESC_LEGACY_NAME_OFFSET = 5;
 constexpr uint8_t ESC_LEGACY_NAME_LENGTH = 12;
 constexpr uint8_t ESC_LEGACY_DIR_REVERSED_OFFSET = 17;
+constexpr uint8_t ESC_LEGACY_MOTOR_KV_OFFSET = 26;
 constexpr uint8_t ESC_LEGACY_MOTOR_POLES_OFFSET = 27;
 
 struct EscBootInfo {
@@ -105,6 +106,20 @@ void prepareEscDirectSession();
 
 bool isValidMotorPoleCount(int poleCount) {
     return poleCount >= 2 && poleCount <= 100;
+}
+
+bool isValidEscMotorKv(int motorKv) {
+    return motorKv >= 20 && motorKv <= 10220;
+}
+
+uint8_t encodeLegacyEscMotorKv(int motorKv) {
+    const int adjustedKv = motorKv - 20;
+    const int raw = (adjustedKv + 20) / 40;
+    return (uint8_t)constrain(raw, 0, 255);
+}
+
+int decodeLegacyEscMotorKv(uint8_t raw) {
+    return (int)raw * 40 + 20;
 }
 
 void saveMotorPoleCount() {
@@ -439,9 +454,9 @@ void printEscEepromSummary(const uint8_t* eeprom, uint16_t length) {
     Serial.print("  startup_power_raw=");
     Serial.println(eeprom[25]);
     Serial.print("  motor_kv_estimate=");
-    Serial.print((uint16_t)eeprom[26] * 40U + 20U);
+    Serial.print(decodeLegacyEscMotorKv(eeprom[ESC_LEGACY_MOTOR_KV_OFFSET]));
     Serial.print(" (raw=");
-    Serial.print(eeprom[26]);
+    Serial.print(eeprom[ESC_LEGACY_MOTOR_KV_OFFSET]);
     Serial.println(", v2.16 formula raw*40+20)");
     Serial.print("  motor_poles=");
     Serial.println(eeprom[27]);
@@ -1578,4 +1593,116 @@ void setEscMotorPolesAndSync(int poleCount) {
     if (updateSucceeded) {
         printMotorPoleCount();
     }
+}
+
+void setEscMotorKv(int motorKv) {
+    if (!isValidEscMotorKv(motorKv)) {
+        Serial.println("ESC kv: value must be between 20 and 10220.");
+        return;
+    }
+
+    bool shouldResetEsc = false;
+
+    const uint8_t newRaw = encodeLegacyEscMotorKv(motorKv);
+    const int appliedMotorKv = decodeLegacyEscMotorKv(newRaw);
+
+    Serial.println();
+    Serial.print("ESC kv: setting motor_kv_estimate to ");
+    Serial.println(motorKv);
+    Serial.println("Reading the legacy EEPROM block, writing byte 26, then verifying.");
+    if (appliedMotorKv != motorKv) {
+        Serial.print("ESC kv: requested value will be rounded to ");
+        Serial.print(appliedMotorKv);
+        Serial.println(" by the legacy AM32 raw*40+20 encoding.");
+    }
+
+    EscBootInfo bootInfo;
+    uint8_t eepromData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+
+    do {
+        if (!beginEscDebugSession(bootInfo, shouldResetEsc)) {
+            break;
+        }
+
+        uint16_t payloadLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               eepromData,
+                               sizeof(eepromData),
+                               payloadLength,
+                               true)) {
+            break;
+        }
+
+        if (payloadLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.print("ESC kv: expected ");
+            Serial.print(ESC_LEGACY_EEPROM_WRITE_SIZE);
+            Serial.print(" EEPROM bytes but got ");
+            Serial.println(payloadLength);
+            break;
+        }
+
+        Serial.println("EEPROM summary before write:");
+        printEscEepromSummary(eepromData, payloadLength);
+
+        if (eepromData[1] >= 3) {
+            Serial.println("ESC kv: refusing to write modern EEPROM layouts until their write path is mapped.");
+            break;
+        }
+
+        const uint8_t oldRaw = eepromData[ESC_LEGACY_MOTOR_KV_OFFSET];
+
+        Serial.print("motor_kv_estimate raw before write: ");
+        Serial.println(oldRaw);
+        Serial.print("motor_kv_estimate raw after write: ");
+        Serial.println(newRaw);
+
+        eepromData[ESC_LEGACY_MOTOR_KV_OFFSET] = newRaw;
+
+        if (!writeEscFlashBlock(bootInfo.encodedEepromAddress,
+                                eepromData,
+                                ESC_LEGACY_EEPROM_WRITE_SIZE,
+                                true)) {
+            break;
+        }
+
+        uint8_t verifyData[ESC_LEGACY_EEPROM_WRITE_SIZE] = {0};
+        uint16_t verifyLength = 0;
+        if (!readEscFlashBlock(bootInfo.encodedEepromAddress,
+                               ESC_LEGACY_EEPROM_WRITE_SIZE,
+                               verifyData,
+                               sizeof(verifyData),
+                               verifyLength,
+                               true)) {
+            Serial.println("ESC kv: write completed, but read-back verification failed.");
+            break;
+        }
+
+        if (verifyLength != ESC_LEGACY_EEPROM_WRITE_SIZE) {
+            Serial.println("ESC kv: verification read length was unexpected.");
+            break;
+        }
+
+        Serial.println("EEPROM summary after write:");
+        printEscEepromSummary(verifyData, verifyLength);
+
+        const uint8_t verifyRaw = verifyData[ESC_LEGACY_MOTOR_KV_OFFSET];
+        if (verifyRaw != newRaw) {
+            Serial.print("ESC kv: verification mismatch, expected raw=");
+            Serial.print(newRaw);
+            Serial.print(" but read back ");
+            Serial.println(verifyRaw);
+            break;
+        }
+
+        Serial.print("ESC kv: motor_kv_estimate updated successfully to ");
+        Serial.println(decodeLegacyEscMotorKv(verifyRaw));
+    } while (false);
+
+    if (shouldResetEsc) {
+        resetEscAfterDebugRead();
+    }
+
+    restoreEscCliSession();
+    Serial.println("ESC kv: passthrough session closed.");
 }
