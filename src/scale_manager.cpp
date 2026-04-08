@@ -131,7 +131,8 @@ void beginScaleManager() {
         startupAutoTareCompleted = false;
         return;
     }
-
+    scale.setLDO(NAU7802_LDO_3V0);
+    scale.setGain(NAU7802_GAIN_128);
     scale.setSampleRate(NAU7802_SPS_320);
     scale.calibrateAFE();
     loadScaleCalibration();
