@@ -6,6 +6,8 @@ window.addEventListener("load", () => {
     downloadTestButton: document.getElementById("download-test-button"),
     studyFileSelect: document.getElementById("study-file-select"),
     loadStudyButton: document.getElementById("load-study-button"),
+    openStudyFileButton: document.getElementById("open-study-file-button"),
+    studyLocalFileInput: document.getElementById("study-local-file-input"),
     studyStatus: document.getElementById("study-status"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
@@ -587,6 +589,36 @@ window.addEventListener("load", () => {
     }
   };
 
+  const openStudyFilePicker = () => {
+    if (!ui.studyLocalFileInput) {
+      return;
+    }
+
+    ui.studyLocalFileInput.value = "";
+    ui.studyLocalFileInput.click();
+  };
+
+  const loadStudyFileFromPc = async (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    setStudyStatus(`Loading ${file.name} from PC...`);
+
+    try {
+      const csv = await file.text();
+      const rows = parseSavedTestCsv(csv);
+      updateChart(chartContexts.study, rows);
+      setStudyStatus(`Loaded ${file.name} from PC with ${rows.length} points.`);
+    } catch (error) {
+      updateChart(chartContexts.study, []);
+      setStudyStatus(`Could not load ${file.name} from PC.`);
+    } finally {
+      event.target.value = "";
+    }
+  };
+
   const scheduleReconnect = () => {
     if (reconnectTimer !== null) {
       return;
@@ -684,5 +716,13 @@ window.addEventListener("load", () => {
 
   if (ui.loadStudyButton) {
     ui.loadStudyButton.addEventListener("click", loadStudyFile);
+  }
+
+  if (ui.openStudyFileButton) {
+    ui.openStudyFileButton.addEventListener("click", openStudyFilePicker);
+  }
+
+  if (ui.studyLocalFileInput) {
+    ui.studyLocalFileInput.addEventListener("change", loadStudyFileFromPc);
   }
 });

@@ -381,6 +381,11 @@ body::before {
   box-shadow: 0 10px 22px rgba(35, 92, 68, 0.18);
 }
 
+.test-button--secondary {
+  background: #5c677d;
+  box-shadow: 0 10px 22px rgba(72, 82, 102, 0.18);
+}
+
 .chart-card {
   display: grid;
   gap: 10px;

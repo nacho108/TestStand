@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=9">
+  <link rel="stylesheet" href="/styles.css?v=10">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -215,10 +215,12 @@
       <section class="testing-extras" data-view-pane="study" hidden>
         <div class="study-toolbar">
           <label class="study-toolbar__field" for="study-file-select">
-            <span class="study-toolbar__label">Saved test</span>
+            <span class="study-toolbar__label">Saved tests in memory</span>
             <select id="study-file-select"></select>
           </label>
           <button class="test-button" id="load-study-button" type="button">Load file</button>
+          <button class="test-button test-button--secondary" id="open-study-file-button" type="button">Open CSV from PC</button>
+          <input id="study-local-file-input" type="file" accept=".csv,text/csv" hidden>
           <span class="study-toolbar__status" id="study-status">Choose a saved CSV to inspect.</span>
         </div>
 
@@ -290,6 +292,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=9"></script>
+  <script src="/app.js?v=10"></script>
 </body>
 </html>
