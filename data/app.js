@@ -570,7 +570,7 @@ window.addEventListener("load", () => {
     setStudyStatus(`Loading ${filename}...`);
 
     try {
-      const response = await fetch(`/api/tests/file?name=${encodeURIComponent(filename)}`, { cache: "no-store" });
+      const response = await fetch(`/api/test-file?name=${encodeURIComponent(filename)}`, { cache: "no-store" });
       if (!response.ok) {
         throw new Error("HTTP status not ok");
       }

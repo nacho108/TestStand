@@ -632,15 +632,7 @@ bool beginWebServer() {
         request->send(response);
     });
 
-    server.on("/api/tests", HTTP_GET, [](AsyncWebServerRequest* request) {
-        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", buildSavedTestsJson());
-        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "0");
-        request->send(response);
-    });
-
-    server.on("/api/tests/file", HTTP_GET, [](AsyncWebServerRequest* request) {
+    auto handleSavedTestCsvRequest = [](AsyncWebServerRequest* request) {
         if (!request->hasParam("name")) {
             request->send(400, "text/plain", "Missing name");
             return;
@@ -664,6 +656,17 @@ bool beginWebServer() {
         response->addHeader("Pragma", "no-cache");
         response->addHeader("Expires", "0");
         response->addHeader("Content-Disposition", "inline; filename=\"" + normalizedName + "\"");
+        request->send(response);
+    };
+
+    server.on("/api/test-file", HTTP_GET, handleSavedTestCsvRequest);
+    server.on("/api/tests/file", HTTP_GET, handleSavedTestCsvRequest);
+
+    server.on("/api/tests", HTTP_GET, [](AsyncWebServerRequest* request) {
+        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", buildSavedTestsJson());
+        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
         request->send(response);
     });
 
