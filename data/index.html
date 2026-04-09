@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=6">
+  <link rel="stylesheet" href="/styles.css?v=7">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -136,18 +136,9 @@
       </section>
 
       <section class="testing-extras" data-view-pane="testing" hidden>
-        <div class="test-grid">
-          <article class="metric-row">
-            <div class="metric-row__top">
-              <span class="metric-row__label">Throttle</span>
-              <strong class="metric-row__value" id="testing-throttle-value">--</strong>
-            </div>
-            <span class="metric-row__health" id="testing-throttle-health">Waiting for motor command</span>
-          </article>
-        </div>
-
         <div class="test-actions">
           <button class="test-button" id="start-motor-test-button" type="button">Start test</button>
+          <button class="test-button test-button--stop" id="stop-motor-test-button" type="button" disabled>Stop test</button>
         </div>
 
         <article class="chart-card">
@@ -218,6 +209,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=6"></script>
+  <script src="/app.js?v=7"></script>
 </body>
 </html>

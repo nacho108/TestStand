@@ -23,6 +23,7 @@ constexpr CommandHelpEntry kCommandHelpEntries[] = {
     {"motor set <0-100>", "softly ramp to target (1 s per 30%)"},
     {"motor ramp", "ramp from current throttle to 100% in 10 seconds"},
     {"motor test", "full automatic motor test and CSV output"},
+    {"motor test stop", "stop the running motor test"},
     {"test list", "list saved test CSV files in LittleFS"},
     {"test get <filename>", "print a saved test CSV file"},
     {"test remove <filename>", "delete a saved test CSV file"},
@@ -226,6 +227,17 @@ void handleCommand(String cmd) {
 
     if (wifiSelectionPending()) {
         handleWifiSelectionInput(cmd);
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("motor test stop")) {
+        if (!testRunning) {
+            Serial.println("No motor test is running");
+            return;
+        }
+
+        requestMotorTestStop();
+        Serial.println("Stopping motor test...");
         return;
     }
 

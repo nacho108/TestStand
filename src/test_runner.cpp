@@ -15,8 +15,10 @@
 namespace {
 
 constexpr const char* kTestStorageDir = "/tests";
+bool motorTestStopRequested = false;
 
 void serviceTestLoop() {
+    processQueuedWebCommand();
     pollEscTelemetry();
     pollScale();
     updateRamp();
@@ -78,6 +80,34 @@ void printTestResultsCsv() {
 
 String buildTestPath(const String& normalizedFilename) {
     return String(kTestStorageDir) + "/" + normalizedFilename;
+}
+
+bool consumeMotorTestStopRequest() {
+    if (!motorTestStopRequested) {
+        return false;
+    }
+
+    motorTestStopRequested = false;
+    return true;
+}
+
+bool shouldAbortMotorTest() {
+    while (Serial.available()) {
+        char c = (char)Serial.read();
+        if (c == 'X' || c == 'x') {
+            emergencyStopRamp();
+            motorTestStopRequested = false;
+            return true;
+        }
+    }
+
+    if (!consumeMotorTestStopRequest()) {
+        return false;
+    }
+
+    Serial.println("Motor test stop requested from web UI.");
+    emergencyStopRamp();
+    return true;
 }
 
 }
@@ -262,12 +292,8 @@ bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
     unsigned long start = millis();
 
     while (millis() - start < durationMs) {
-        while (Serial.available()) {
-            char c = (char)Serial.read();
-            if (c == 'X' || c == 'x') {
-                emergencyStopRamp();
-                return false;
-            }
+        if (shouldAbortMotorTest()) {
+            return false;
         }
 
         serviceTestLoop();
@@ -284,6 +310,7 @@ bool runMotorTest() {
     }
 
     testRunning = true;
+    motorTestStopRequested = false;
     telemetryStreaming = false;
     authorizeMotorOutput();
     cancelRamp();
@@ -318,13 +345,13 @@ bool runMotorTest() {
 
         if (rampDurationMs > 0 && !updateTelemetryDuringBlockingWait(rampDurationMs)) {
             testRunning = false;
-            Serial.println("Motor test aborted by emergency stop");
+            Serial.println("Motor test aborted");
             return false;
         }
 
         if (!updateTelemetryDuringBlockingWait(500)) {
             testRunning = false;
-            Serial.println("Motor test aborted by emergency stop");
+            Serial.println("Motor test aborted");
             return false;
         }
 
@@ -341,14 +368,10 @@ bool runMotorTest() {
 
         unsigned long avgStart = millis();
         while (millis() - avgStart < 1000) {
-            while (Serial.available()) {
-                char c = (char)Serial.read();
-                if (c == 'X' || c == 'x') {
-                    emergencyStopRamp();
-                    testRunning = false;
-                    Serial.println("Motor test aborted by emergency stop");
-                    return false;
-                }
+            if (shouldAbortMotorTest()) {
+                testRunning = false;
+                Serial.println("Motor test aborted");
+                return false;
             }
 
             EscTelemetry tlm;
@@ -441,4 +464,12 @@ bool runMotorTest() {
     testFilenamePromptPending = false;
     Serial.println("Would you like to save the test? Type YES to save or NO to skip.");
     return true;
+}
+
+void requestMotorTestStop() {
+    motorTestStopRequested = true;
+}
+
+bool isMotorTestStopRequested() {
+    return motorTestStopRequested;
 }

@@ -2,6 +2,7 @@ window.addEventListener("load", () => {
   const ui = {
     viewTitle: document.getElementById("view-title"),
     startMotorTestButton: document.getElementById("start-motor-test-button"),
+    stopMotorTestButton: document.getElementById("stop-motor-test-button"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -115,6 +116,9 @@ window.addEventListener("load", () => {
     setHealth(ui.thrustHealth, "Waiting for scale", "warn");
     setHealth(ui.motorTempHealth, "Waiting for IR sensor", "warn");
     setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
+    if (ui.stopMotorTestButton) {
+      ui.stopMotorTestButton.disabled = true;
+    }
   };
 
   const formatScaleValue = (value, unit, digits = 0) => {
@@ -239,11 +243,15 @@ window.addEventListener("load", () => {
     updateTestChart(cachedTestResults);
 
     if (Boolean(data.test_running)) {
+      lastKnownTestRunning = true;
       motorTestPending = true;
       setMotorTestButtonState("Test running...", true);
+      setStopMotorTestButtonState(false);
     } else {
+      lastKnownTestRunning = false;
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
+      setStopMotorTestButtonState(true);
     }
 
     if (hasTelemetry) {
@@ -290,6 +298,7 @@ window.addEventListener("load", () => {
   let reconnectTimer = null;
   let pollTimer = null;
   let motorTestPending = false;
+  let lastKnownTestRunning = false;
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
 
@@ -328,12 +337,16 @@ window.addEventListener("load", () => {
   };
 
   const setMotorTestButtonState = (label, disabled = false) => {
-    if (!ui.startMotorTestButton) {
-      return;
+    if (ui.startMotorTestButton) {
+      ui.startMotorTestButton.textContent = label;
+      ui.startMotorTestButton.disabled = disabled;
     }
+  };
 
-    ui.startMotorTestButton.textContent = label;
-    ui.startMotorTestButton.disabled = disabled;
+  const setStopMotorTestButtonState = (disabled = true) => {
+    if (ui.stopMotorTestButton) {
+      ui.stopMotorTestButton.disabled = disabled;
+    }
   };
 
   const runMotorTest = async () => {
@@ -343,6 +356,7 @@ window.addEventListener("load", () => {
 
     motorTestPending = true;
     setMotorTestButtonState("Starting...", true);
+    setStopMotorTestButtonState(true);
     cachedTestResults = [];
     cachedTestResultCount = 0;
     updateTestChart([]);
@@ -362,10 +376,41 @@ window.addEventListener("load", () => {
       }
 
       setMotorTestButtonState("Test running...", true);
+      setStopMotorTestButtonState(false);
     } catch (error) {
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
+      setStopMotorTestButtonState(true);
       setHealth(ui.powerHealth, "Failed to start motor test", "error");
+    }
+  };
+
+  const stopMotorTest = async () => {
+    if (!ui.stopMotorTestButton || ui.stopMotorTestButton.disabled) {
+      return;
+    }
+
+    setStopMotorTestButtonState(true);
+    setHealth(ui.powerHealth, "Stopping motor test...", "warn");
+
+    try {
+      const body = new URLSearchParams({ cmd: "motor test stop" });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+    } catch (error) {
+      if (lastKnownTestRunning) {
+        setStopMotorTestButtonState(false);
+      }
+      setHealth(ui.powerHealth, "Failed to stop motor test", "error");
     }
   };
 
@@ -404,10 +449,14 @@ window.addEventListener("load", () => {
           pollStatus();
         }
         if (!data.test_running) {
+          lastKnownTestRunning = false;
           motorTestPending = false;
           setMotorTestButtonState("Start test", false);
+          setStopMotorTestButtonState(true);
         } else {
+          lastKnownTestRunning = true;
           setMotorTestButtonState("Test running...", true);
+          setStopMotorTestButtonState(false);
         }
       } catch (error) {
         setHealth(ui.powerHealth, "Malformed live payload", "error");
@@ -433,5 +482,9 @@ window.addEventListener("load", () => {
 
   if (ui.startMotorTestButton) {
     ui.startMotorTestButton.addEventListener("click", runMotorTest);
+  }
+
+  if (ui.stopMotorTestButton) {
+    ui.stopMotorTestButton.addEventListener("click", stopMotorTest);
   }
 });

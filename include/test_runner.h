@@ -5,6 +5,8 @@
 bool beginTestStorage();
 bool updateTelemetryDuringBlockingWait(unsigned long durationMs);
 bool runMotorTest();
+void requestMotorTestStop();
+bool isMotorTestStopRequested();
 bool hasTestResults();
 String normalizeTestFilename(const String& filename);
 bool saveLastTestToLittleFS(const String& filename);

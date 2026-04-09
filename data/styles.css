@@ -311,6 +311,8 @@ body::before {
 .test-actions {
   display: flex;
   justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .test-button {
@@ -323,6 +325,18 @@ body::before {
   font-weight: 700;
   background: #244d74;
   box-shadow: 0 10px 22px rgba(27, 59, 91, 0.18);
+  transition: opacity 160ms ease, box-shadow 160ms ease;
+}
+
+.test-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.test-button--stop {
+  background: #a12c3f;
+  box-shadow: 0 10px 22px rgba(122, 36, 50, 0.18);
 }
 
 .chart-card {
