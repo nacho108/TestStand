@@ -5,6 +5,7 @@
 void beginScaleManager();
 void pollScale();
 bool parseScaleCalibrationCommand(const String& cmd, float& outValue);
+bool parseScaleFactorCommand(const String& cmd, float& outValue);
 void saveScaleCalibration();
 void loadScaleCalibration();
 float rawToWeightGrams(int32_t raw);
@@ -20,3 +21,4 @@ void printScaleStatus();
 void printScaleReading();
 bool tareScale();
 void calibrateScale(float knownWeightGrams);
+bool setScaleCalibrationFactor(float newFactor);

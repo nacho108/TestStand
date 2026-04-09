@@ -41,6 +41,8 @@ constexpr CommandHelpEntry kCommandHelpEntries[] = {
     {"scale read", "print live 0.5 s moving-average load cell value"},
     {"scale tare", "tare / zero the load cell with 1 second average"},
     {"scale calibration <grams>", "calibrate scale using known weight in grams with 1 second average"},
+    {"scale cal <grams>", "alias for scale calibration <grams>"},
+    {"scale factor <value>", "set scale calibration factor directly"},
     {"calibrate current low <A>", ""},
     {"calibrate current high <A>", ""},
     {"calibrate voltage low <V>", ""},
@@ -397,6 +399,11 @@ void handleCommand(String cmd) {
 
     if (parseScaleCalibrationCommand(cmd, calValue)) {
         calibrateScale(calValue);
+        return;
+    }
+
+    if (parseScaleFactorCommand(cmd, calValue)) {
+        setScaleCalibrationFactor(calValue);
         return;
     }
 

@@ -179,7 +179,27 @@ void pollScale() {
 }
 
 bool parseScaleCalibrationCommand(const String& cmd, float& outValue) {
-    const char* prefix = "scale calibration ";
+    const char* prefixes[] = {
+        "scale calibration ",
+        "scale cal "
+    };
+
+    for (const char* prefix : prefixes) {
+        if (!cmd.startsWith(prefix)) {
+            continue;
+        }
+
+        String valueText = cmd.substring(strlen(prefix));
+        valueText.trim();
+        outValue = valueText.toFloat();
+        return true;
+    }
+
+    return false;
+}
+
+bool parseScaleFactorCommand(const String& cmd, float& outValue) {
+    const char* prefix = "scale factor ";
     if (!cmd.startsWith(prefix)) {
         return false;
     }
@@ -552,4 +572,29 @@ void calibrateScale(float knownWeightGrams) {
     Serial.print("  verified weight: ");
     Serial.print(verifyWeight, 3);
     Serial.println(" g");
+}
+
+bool setScaleCalibrationFactor(float newFactor) {
+    if (simulationEnabled()) {
+        Serial.println("Scale calibration factor is not available in simulation mode");
+        return false;
+    }
+
+    if (!scaleDetected) {
+        Serial.println("Scale not detected");
+        return false;
+    }
+
+    if (fabs(newFactor) < 0.000001f) {
+        Serial.println("Scale calibration factor must be non-zero");
+        return false;
+    }
+
+    scale.setCalibrationFactor(newFactor);
+    saveScaleCalibration();
+    clearScaleWindow();
+
+    Serial.print("Scale calibration factor set to ");
+    Serial.println(newFactor, 6);
+    return true;
 }
