@@ -285,6 +285,7 @@ bool runMotorTest() {
 
     testRunning = true;
     telemetryStreaming = false;
+    authorizeMotorOutput();
     cancelRamp();
     clearTestResults();
 

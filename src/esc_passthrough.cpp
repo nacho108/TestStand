@@ -1174,8 +1174,7 @@ void processSerialPassthrough() {
 }
 
 void requestEscPassthroughModeAndRestart() {
-    cancelRamp();
-    writeThrottlePercent(0.0f);
+    holdEscOutputLow();
 
     preferences.begin("am32cli", false);
     preferences.putBool(PASSTHROUGH_PREF_KEY, true);
@@ -1201,8 +1200,7 @@ void printMotorPoleCount() {
 }
 
 void requestBoardRestart() {
-    cancelRamp();
-    writeThrottlePercent(0.0f);
+    holdEscOutputLow();
 
     Serial.println("Restarting ESP32 board...");
     delay(100);
@@ -1220,10 +1218,8 @@ bool consumeEscPassthroughRequest() {
 }
 
 void runEscPassthroughMode() {
-    cancelRamp();
-    writeThrottlePercent(0.0f);
+    holdEscOutputLow();
     escSerial.end();
-    ledcDetachPin(ESC_PWM_PIN);
     pinMode(ESC_PWM_PIN, INPUT_PULLUP);
 
     Serial.println();

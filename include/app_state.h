@@ -29,6 +29,8 @@ extern bool lastScaleSampleValid;
 
 extern String inputBuffer;
 extern float throttlePercent;
+extern bool motorOutputAuthorized;
+extern bool motorOutputRevokeWhenIdle;
 extern int motorPoleCount;
 extern bool telemetryStreaming;
 extern bool promptShown;

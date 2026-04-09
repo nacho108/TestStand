@@ -4,6 +4,9 @@
 
 void beginMotorControl();
 uint32_t microsecondsToDuty(int us);
+void authorizeMotorOutput();
+void revokeMotorOutput();
+void holdEscOutputLow();
 void writeThrottlePercent(float percent);
 void cancelRamp();
 void startRamp(float targetPercent, unsigned long durationMs);

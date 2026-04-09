@@ -341,6 +341,10 @@ void handleCommand(String cmd) {
             return;
         }
 
+        if (value > 0.0f) {
+            authorizeMotorOutput();
+        }
+
         unsigned long durationMs = calculateThrottleRampDurationMs(throttlePercent, value);
         startRamp(value, durationMs);
 

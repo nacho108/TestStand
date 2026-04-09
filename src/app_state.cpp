@@ -20,6 +20,8 @@ bool lastScaleSampleValid = false;
 
 String inputBuffer;
 float throttlePercent = 0.0f;
+bool motorOutputAuthorized = false;
+bool motorOutputRevokeWhenIdle = false;
 int motorPoleCount = DEFAULT_MOTOR_POLES;
 bool telemetryStreaming = false;
 bool promptShown = false;

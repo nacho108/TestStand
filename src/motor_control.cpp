@@ -10,6 +10,10 @@ void driveEscSignalLow() {
     pinMode(ESC_PWM_PIN, OUTPUT);
     digitalWrite(ESC_PWM_PIN, LOW);
 }
+
+bool canDriveEscAboveIdle() {
+    return motorOutputAuthorized;
+}
 }  // namespace
 
 void beginMotorControl() {
@@ -25,15 +29,42 @@ uint32_t microsecondsToDuty(int us) {
     return (uint32_t)((((uint64_t)us) * ((1UL << PWM_RESOLUTION) - 1)) / 20000ULL);
 }
 
+void authorizeMotorOutput() {
+    motorOutputAuthorized = true;
+    motorOutputRevokeWhenIdle = false;
+}
+
+void revokeMotorOutput() {
+    motorOutputAuthorized = false;
+    motorOutputRevokeWhenIdle = false;
+}
+
+void holdEscOutputLow() {
+    ramp.active = false;
+    revokeMotorOutput();
+    throttlePercent = 0.0f;
+    ledcWrite(PWM_CHANNEL, 0);
+    ledcDetachPin(ESC_PWM_PIN);
+    driveEscSignalLow();
+}
+
 void writeThrottlePercent(float percent) {
     if (percent < 0.0f) percent = 0.0f;
     if (percent > 100.0f) percent = 100.0f;
+
+    if (percent > 0.0f && !canDriveEscAboveIdle()) {
+        percent = 0.0f;
+    }
 
     throttlePercent = percent;
 
     int pulseUs = 1000 + (int)(percent * 10.0f);
     uint32_t duty = microsecondsToDuty(pulseUs);
     ledcWrite(PWM_CHANNEL, duty);
+
+    if (percent <= 0.0f && motorOutputRevokeWhenIdle) {
+        revokeMotorOutput();
+    }
 }
 
 void cancelRamp() {
@@ -43,6 +74,18 @@ void cancelRamp() {
 void startRamp(float targetPercent, unsigned long durationMs) {
     if (targetPercent < 0.0f) targetPercent = 0.0f;
     if (targetPercent > 100.0f) targetPercent = 100.0f;
+
+    if (targetPercent > 0.0f && !canDriveEscAboveIdle()) {
+        cancelRamp();
+        writeThrottlePercent(0.0f);
+        return;
+    }
+
+    if (targetPercent <= 0.0f) {
+        motorOutputRevokeWhenIdle = true;
+    } else {
+        motorOutputRevokeWhenIdle = false;
+    }
 
     if (durationMs == 0) {
         cancelRamp();
@@ -83,6 +126,7 @@ void updateRamp() {
 
 void stopMotorImmediate() {
     cancelRamp();
+    revokeMotorOutput();
     writeThrottlePercent(0.0f);
 }
 
@@ -105,10 +149,12 @@ void emergencyStopRamp() {
 }
 
 void startMotorAtFivePercent() {
+    authorizeMotorOutput();
     cancelRamp();
     writeThrottlePercent(5.0f);
 }
 
 void rampToFullPower() {
+    authorizeMotorOutput();
     startRamp(100.0f, 10000);
 }
