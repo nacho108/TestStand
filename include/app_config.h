@@ -31,8 +31,8 @@ static constexpr float DEFAULT_CURRENT_OFFSET = 0.0f;
 
 static constexpr int DEFAULT_MOTOR_POLES = 28;
 
-static constexpr int TEST_STEP_PERCENT = 5;
-static constexpr int TEST_MAX_RESULTS = 21;
+static constexpr int TEST_THROTTLE_LEVELS[] = {0, 5, 10, 20, 30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 90, 100};
+static constexpr int TEST_MAX_RESULTS = sizeof(TEST_THROTTLE_LEVELS) / sizeof(TEST_THROTTLE_LEVELS[0]);
 static constexpr unsigned long AVAILABLE_LED_BLINK_MS = 500;
 
 static constexpr const char* WEB_AP_SSID = "TestStand-ESP32";

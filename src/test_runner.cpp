@@ -388,7 +388,8 @@ bool runMotorTest() {
     Serial.println("  next 1 second at target = averaging");
     Serial.println("Press X for emergency ramp-down");
 
-    for (int step = 0; step <= 100; step += TEST_STEP_PERCENT) {
+    for (int stepIndex = 0; stepIndex < TEST_MAX_RESULTS; ++stepIndex) {
+        const int step = TEST_THROTTLE_LEVELS[stepIndex];
         if (step > 0) {
             authorizeMotorOutput();
         }
