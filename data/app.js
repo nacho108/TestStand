@@ -10,6 +10,7 @@ window.addEventListener("load", () => {
     studyLocalFileInput: document.getElementById("study-local-file-input"),
     studyStatus: document.getElementById("study-status"),
     studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
+    studySeriesInputs: Array.from(document.querySelectorAll('input[name="study-series"]')),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -77,7 +78,13 @@ window.addEventListener("load", () => {
         document.getElementById("study-chart-tick-3"),
         document.getElementById("study-chart-tick-4")
       ],
-      xAxisKey: "throttle_percent"
+      xAxisKey: "throttle_percent",
+      visibleSeries: {
+        thrust: true,
+        power: true,
+        rpm: true,
+        temp: true
+      }
     }
   };
 
@@ -247,21 +254,26 @@ window.addEventListener("load", () => {
     updateChartScales(context, rows);
     updateXAxis(context, rows);
     const xAxisKey = context.xAxisKey || "throttle_percent";
+    const visibleSeries = context.visibleSeries || {};
 
     if (context.thrustPath) {
       context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey));
+      context.thrustPath.parentElement.style.display = visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerPath) {
       context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey));
+      context.powerPath.parentElement.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.rpmPath) {
       context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey));
+      context.rpmPath.parentElement.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempPath) {
       context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey));
+      context.tempPath.parentElement.style.display = visibleSeries.temp === false ? "none" : "";
     }
   };
 
@@ -785,6 +797,15 @@ window.addEventListener("load", () => {
         }
 
         chartContexts.study.xAxisKey = input.value === "thrust_grams" ? "thrust_grams" : "throttle_percent";
+        updateChart(chartContexts.study, studyRows);
+      });
+    });
+  }
+
+  if (ui.studySeriesInputs.length > 0) {
+    ui.studySeriesInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        chartContexts.study.visibleSeries[input.value] = input.checked;
         updateChart(chartContexts.study, studyRows);
       });
     });

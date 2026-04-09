@@ -432,20 +432,31 @@ body::before {
 }
 
 .chart-plot--study .chart-plot__grid {
-  inset: 18px 204px 36px 92px;
+  inset: 18px 204px 36px 204px;
+}
+
+.chart-plot--study .chart-plot__axis--y {
+  left: 204px;
 }
 
 .chart-plot--study .chart-plot__axis--x {
+  left: 204px;
   right: 204px;
 }
 
 .chart-plot--study .chart-line {
+  left: 204px;
   right: 204px;
-  width: calc(100% - 296px);
+  width: calc(100% - 408px);
 }
 
 .chart-plot--study .chart-ticks {
+  left: 204px;
   right: 204px;
+}
+
+.chart-plot--study .chart-scale--left {
+  left: 120px;
 }
 
 .chart-plot--study .chart-scale--right {
@@ -604,6 +615,43 @@ body::before {
   margin: 0;
 }
 
+.chart-series-picker {
+  position: absolute;
+  top: 18px;
+  left: 8px;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: 100px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 74, 112, 0.12);
+  border-radius: 4px;
+  background: rgba(237, 243, 251, 0.96);
+}
+
+.chart-series-picker__title {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-series-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chart-series-picker__option input {
+  margin: 0;
+}
+
 @media (max-width: 1180px) {
   .group-grid {
     grid-template-columns: 1fr;
@@ -630,10 +678,11 @@ body::before {
   }
 
   .chart-plot--study .chart-plot__grid {
-    inset: 18px 92px 120px 92px;
+    inset: 112px 92px 120px 92px;
   }
 
   .chart-plot--study .chart-plot__axis--y {
+    left: 92px;
     bottom: 120px;
   }
 
@@ -643,22 +692,36 @@ body::before {
   }
 
   .chart-plot--study .chart-line {
+    left: 92px;
     right: 92px;
     bottom: 120px;
     width: calc(100% - 184px);
   }
 
   .chart-plot--study .chart-ticks {
+    left: 92px;
     right: 92px;
     bottom: 96px;
   }
 
   .chart-plot--study .chart-scale {
+    top: 112px;
     bottom: 120px;
+  }
+
+  .chart-plot--study .chart-scale--left {
+    left: 8px;
   }
 
   .chart-plot--study .chart-scale--right {
     right: 8px;
+  }
+
+  .chart-series-picker {
+    top: 8px;
+    left: 8px;
+    width: calc(100% - 16px);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .chart-axis-picker {

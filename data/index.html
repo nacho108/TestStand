@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=11">
+  <link rel="stylesheet" href="/styles.css?v=12">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -235,6 +235,25 @@
             <span class="legend-temp">Motor temp</span>
           </div>
           <div class="chart-plot chart-plot--study">
+            <fieldset class="chart-series-picker">
+              <legend class="chart-series-picker__title">Variables</legend>
+              <label class="chart-series-picker__option" for="study-series-thrust">
+                <input id="study-series-thrust" type="checkbox" name="study-series" value="thrust" checked>
+                <span>Thrust</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-power">
+                <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
+                <span>Watts</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-rpm">
+                <input id="study-series-rpm" type="checkbox" name="study-series" value="rpm" checked>
+                <span>RPM</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-temp">
+                <input id="study-series-temp" type="checkbox" name="study-series" value="temp" checked>
+                <span>Motor temp</span>
+              </label>
+            </fieldset>
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-top-power">--</span>
@@ -303,6 +322,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=11"></script>
+  <script src="/app.js?v=12"></script>
 </body>
 </html>
