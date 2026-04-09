@@ -4,6 +4,9 @@ window.addEventListener("load", () => {
     startMotorTestButton: document.getElementById("start-motor-test-button"),
     stopMotorTestButton: document.getElementById("stop-motor-test-button"),
     downloadTestButton: document.getElementById("download-test-button"),
+    studyFileSelect: document.getElementById("study-file-select"),
+    loadStudyButton: document.getElementById("load-study-button"),
+    studyStatus: document.getElementById("study-status"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -24,27 +27,64 @@ window.addEventListener("load", () => {
     thrustHealth: document.getElementById("thrust-health"),
     escTempHealth: document.getElementById("esc-temp-health"),
     motorTempHealth: document.getElementById("motor-temp-health"),
-    ambientTempHealth: document.getElementById("ambient-temp-health"),
-    chartThrustPath: document.querySelector(".chart-line--thrust path"),
-    chartPowerPath: document.querySelector(".chart-line--power path"),
-    chartRpmPath: document.querySelector(".chart-line--rpm path"),
-    chartTempPath: document.querySelector(".chart-line--temp path"),
-    chartLeftTopPower: document.getElementById("chart-left-top-power"),
-    chartLeftMidPower: document.getElementById("chart-left-mid-power"),
-    chartLeftBottomPower: document.getElementById("chart-left-bottom-power"),
-    chartLeftTopRpm: document.getElementById("chart-left-top-rpm"),
-    chartLeftMidRpm: document.getElementById("chart-left-mid-rpm"),
-    chartLeftBottomRpm: document.getElementById("chart-left-bottom-rpm"),
-    chartRightTopThrust: document.getElementById("chart-right-top-thrust"),
-    chartRightMidThrust: document.getElementById("chart-right-mid-thrust"),
-    chartRightBottomThrust: document.getElementById("chart-right-bottom-thrust"),
-    chartRightTopTemp: document.getElementById("chart-right-top-temp"),
-    chartRightMidTemp: document.getElementById("chart-right-mid-temp"),
-    chartRightBottomTemp: document.getElementById("chart-right-bottom-temp")
+    ambientTempHealth: document.getElementById("ambient-temp-health")
+  };
+
+  const chartContexts = {
+    testing: {
+      thrustPath: document.getElementById("testing-chart-thrust-path"),
+      powerPath: document.getElementById("testing-chart-power-path"),
+      rpmPath: document.getElementById("testing-chart-rpm-path"),
+      tempPath: document.getElementById("testing-chart-temp-path"),
+      leftTopPower: document.getElementById("testing-chart-left-top-power"),
+      leftMidPower: document.getElementById("testing-chart-left-mid-power"),
+      leftBottomPower: document.getElementById("testing-chart-left-bottom-power"),
+      leftTopRpm: document.getElementById("testing-chart-left-top-rpm"),
+      leftMidRpm: document.getElementById("testing-chart-left-mid-rpm"),
+      leftBottomRpm: document.getElementById("testing-chart-left-bottom-rpm"),
+      rightTopThrust: document.getElementById("testing-chart-right-top-thrust"),
+      rightMidThrust: document.getElementById("testing-chart-right-mid-thrust"),
+      rightBottomThrust: document.getElementById("testing-chart-right-bottom-thrust"),
+      rightTopTemp: document.getElementById("testing-chart-right-top-temp"),
+      rightMidTemp: document.getElementById("testing-chart-right-mid-temp"),
+      rightBottomTemp: document.getElementById("testing-chart-right-bottom-temp")
+    },
+    study: {
+      thrustPath: document.getElementById("study-chart-thrust-path"),
+      powerPath: document.getElementById("study-chart-power-path"),
+      rpmPath: document.getElementById("study-chart-rpm-path"),
+      tempPath: document.getElementById("study-chart-temp-path"),
+      leftTopPower: document.getElementById("study-chart-left-top-power"),
+      leftMidPower: document.getElementById("study-chart-left-mid-power"),
+      leftBottomPower: document.getElementById("study-chart-left-bottom-power"),
+      leftTopRpm: document.getElementById("study-chart-left-top-rpm"),
+      leftMidRpm: document.getElementById("study-chart-left-mid-rpm"),
+      leftBottomRpm: document.getElementById("study-chart-left-bottom-rpm"),
+      rightTopThrust: document.getElementById("study-chart-right-top-thrust"),
+      rightMidThrust: document.getElementById("study-chart-right-mid-thrust"),
+      rightBottomThrust: document.getElementById("study-chart-right-bottom-thrust"),
+      rightTopTemp: document.getElementById("study-chart-right-top-temp"),
+      rightMidTemp: document.getElementById("study-chart-right-mid-temp"),
+      rightBottomTemp: document.getElementById("study-chart-right-bottom-temp")
+    }
   };
 
   const links = Array.from(document.querySelectorAll("[data-view-link]"));
   const panes = Array.from(document.querySelectorAll("[data-view-pane]"));
+  const viewTitles = {
+    overview: "Live overview",
+    testing: "Testing",
+    study: "Study"
+  };
+
+  let socket = null;
+  let reconnectTimer = null;
+  let pollTimer = null;
+  let motorTestPending = false;
+  let lastKnownTestRunning = false;
+  let cachedTestResults = [];
+  let cachedTestResultCount = 0;
+  let savedTestFiles = [];
 
   const setText = (element, value) => {
     if (element) {
@@ -66,30 +106,6 @@ window.addEventListener("load", () => {
     element.textContent = text;
   };
 
-  const setView = (view) => {
-    links.forEach((link) => {
-      link.classList.toggle("sidebar__nav-link--active", link.dataset.viewLink === view);
-    });
-
-    panes.forEach((pane) => {
-      pane.hidden = pane.dataset.viewPane !== view;
-    });
-
-    if (ui.viewTitle) {
-      ui.viewTitle.textContent = view === "testing" ? "Testing" : "Live overview";
-    }
-  };
-
-  links.forEach((link) => {
-    link.addEventListener("click", (event) => {
-      event.preventDefault();
-      const { viewLink } = link.dataset;
-      if (viewLink) {
-        setView(viewLink);
-      }
-    });
-  });
-
   const formatNumber = (value, unit, digits = 2) => {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "--";
@@ -104,25 +120,6 @@ window.addEventListener("load", () => {
     }
 
     return `${Math.round(Number(value))} ${unit}`;
-  };
-
-  const applyDisconnectedState = () => {
-    setHealth(ui.overviewThrottleHealth, "Waiting for motor command", "warn");
-    setHealth(ui.testingThrottleHealth, "Waiting for motor command", "warn");
-    setHealth(ui.voltageHealth, "Waiting for ESC telemetry", "error");
-    setHealth(ui.currentHealth, "Waiting for ESC telemetry", "error");
-    setHealth(ui.powerHealth, "Waiting for live feed", "error");
-    setHealth(ui.rpmHealth, "Waiting for telemetry", "error");
-    setHealth(ui.escTempHealth, "Waiting for ESC telemetry", "error");
-    setHealth(ui.thrustHealth, "Waiting for scale", "warn");
-    setHealth(ui.motorTempHealth, "Waiting for IR sensor", "warn");
-    setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
-    if (ui.stopMotorTestButton) {
-      ui.stopMotorTestButton.disabled = true;
-    }
-    if (ui.downloadTestButton) {
-      ui.downloadTestButton.disabled = true;
-    }
   };
 
   const formatScaleValue = (value, unit, digits = 0) => {
@@ -154,16 +151,16 @@ window.addEventListener("load", () => {
     }, 0);
   };
 
-  const updateChartScales = (rows) => {
+  const updateChartScales = (context, rows) => {
     const maxPower = getSeriesMax(rows, "power_w");
     const maxRpm = getSeriesMax(rows, "rpm");
     const maxThrust = getSeriesMax(rows, "thrust_grams");
     const maxTemp = getSeriesMax(rows, "motor_temperature_c");
 
-    setScaleLabels(ui.chartLeftTopPower, ui.chartLeftMidPower, ui.chartLeftBottomPower, maxPower, "W", 0);
-    setScaleLabels(ui.chartLeftTopRpm, ui.chartLeftMidRpm, ui.chartLeftBottomRpm, maxRpm, "rpm", 0);
-    setScaleLabels(ui.chartRightTopThrust, ui.chartRightMidThrust, ui.chartRightBottomThrust, maxThrust, "g", 0);
-    setScaleLabels(ui.chartRightTopTemp, ui.chartRightMidTemp, ui.chartRightBottomTemp, maxTemp, "C", 1);
+    setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, maxPower, "W", 0);
+    setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, maxRpm, "rpm", 0);
+    setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, maxThrust, "g", 0);
+    setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, maxTemp, "C", 1);
   };
 
   const buildChartPath = (rows, valueKey) => {
@@ -175,7 +172,7 @@ window.addEventListener("load", () => {
       .map((row) => {
         const x = Number(row?.throttle_percent);
         const y = Number(row?.[valueKey]);
-        if (Number.isNaN(x) || Number.isNaN(y)) {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
           return null;
         }
 
@@ -200,23 +197,171 @@ window.addEventListener("load", () => {
       .join(" ");
   };
 
-  const updateTestChart = (rows) => {
-    updateChartScales(rows);
+  const updateChart = (context, rows) => {
+    updateChartScales(context, rows);
 
-    if (ui.chartThrustPath) {
-      ui.chartThrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams"));
+    if (context.thrustPath) {
+      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams"));
     }
 
-    if (ui.chartPowerPath) {
-      ui.chartPowerPath.setAttribute("d", buildChartPath(rows, "power_w"));
+    if (context.powerPath) {
+      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w"));
     }
 
-    if (ui.chartRpmPath) {
-      ui.chartRpmPath.setAttribute("d", buildChartPath(rows, "rpm"));
+    if (context.rpmPath) {
+      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm"));
     }
 
-    if (ui.chartTempPath) {
-      ui.chartTempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c"));
+    if (context.tempPath) {
+      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c"));
+    }
+  };
+
+  const parseCsvNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const parseSavedTestCsv = (csv) => {
+    if (typeof csv !== "string" || csv.trim().length === 0) {
+      return [];
+    }
+
+    const lines = csv.trim().split(/\r?\n/);
+    if (lines.length < 2) {
+      return [];
+    }
+
+    return lines.slice(1)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      .map((line) => {
+        const cells = line.split(",");
+        return {
+          throttle_percent: parseCsvNumber(cells[0]),
+          voltage_v: parseCsvNumber(cells[1]),
+          current_a: parseCsvNumber(cells[2]),
+          power_w: parseCsvNumber(cells[3]),
+          rpm: parseCsvNumber(cells[4]),
+          esc_temperature_c: parseCsvNumber(cells[5]),
+          motor_temperature_c: parseCsvNumber(cells[6]),
+          thrust_grams: parseCsvNumber(cells[7])
+        };
+      });
+  };
+
+  const setStudyStatus = (text) => {
+    setText(ui.studyStatus, text);
+  };
+
+  const setMotorTestButtonState = (label, disabled = false) => {
+    if (ui.startMotorTestButton) {
+      ui.startMotorTestButton.textContent = label;
+      ui.startMotorTestButton.disabled = disabled;
+    }
+  };
+
+  const setStopMotorTestButtonState = (disabled = true) => {
+    if (ui.stopMotorTestButton) {
+      ui.stopMotorTestButton.disabled = disabled;
+    }
+  };
+
+  const setDownloadTestButtonState = (disabled = true) => {
+    if (ui.downloadTestButton) {
+      ui.downloadTestButton.disabled = disabled;
+    }
+  };
+
+  const applyDisconnectedState = () => {
+    setHealth(ui.overviewThrottleHealth, "Waiting for motor command", "warn");
+    setHealth(ui.testingThrottleHealth, "Waiting for motor command", "warn");
+    setHealth(ui.voltageHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.currentHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.powerHealth, "Waiting for live feed", "error");
+    setHealth(ui.rpmHealth, "Waiting for telemetry", "error");
+    setHealth(ui.escTempHealth, "Waiting for ESC telemetry", "error");
+    setHealth(ui.thrustHealth, "Waiting for scale", "warn");
+    setHealth(ui.motorTempHealth, "Waiting for IR sensor", "warn");
+    setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
+    setStopMotorTestButtonState(true);
+    setDownloadTestButtonState(true);
+  };
+
+  const rebuildStudySelect = () => {
+    if (!ui.studyFileSelect) {
+      return;
+    }
+
+    const previousValue = ui.studyFileSelect.value;
+    ui.studyFileSelect.innerHTML = "";
+
+    if (savedTestFiles.length === 0) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No saved tests found";
+      ui.studyFileSelect.appendChild(option);
+      ui.studyFileSelect.disabled = true;
+      if (ui.loadStudyButton) {
+        ui.loadStudyButton.disabled = true;
+      }
+      updateChart(chartContexts.study, []);
+      return;
+    }
+
+    savedTestFiles.forEach((file) => {
+      const option = document.createElement("option");
+      option.value = file.name;
+      option.textContent = `${file.name} (${file.size} B)`;
+      ui.studyFileSelect.appendChild(option);
+    });
+
+    ui.studyFileSelect.disabled = false;
+    ui.studyFileSelect.value = savedTestFiles.some((file) => file.name === previousValue)
+      ? previousValue
+      : savedTestFiles[0].name;
+
+    if (ui.loadStudyButton) {
+      ui.loadStudyButton.disabled = false;
+    }
+  };
+
+  const refreshSavedTests = async () => {
+    try {
+      const response = await fetch("/api/tests", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      const payload = await response.json();
+      savedTestFiles = Array.isArray(payload.files) ? payload.files : [];
+      rebuildStudySelect();
+
+      if (savedTestFiles.length === 0) {
+        setStudyStatus("No saved CSV files found in storage.");
+      } else {
+        setStudyStatus("Choose a saved CSV and load it into the chart.");
+      }
+    } catch (error) {
+      savedTestFiles = [];
+      rebuildStudySelect();
+      setStudyStatus("Could not read saved test list.");
+    }
+  };
+
+  const setView = (view) => {
+    links.forEach((link) => {
+      link.classList.toggle("sidebar__nav-link--active", link.dataset.viewLink === view);
+    });
+
+    panes.forEach((pane) => {
+      pane.hidden = pane.dataset.viewPane !== view;
+    });
+
+    setText(ui.viewTitle, viewTitles[view] || "Live overview");
+
+    if (view === "study") {
+      refreshSavedTests();
     }
   };
 
@@ -244,7 +389,7 @@ window.addEventListener("load", () => {
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
-    updateTestChart(cachedTestResults);
+    updateChart(chartContexts.testing, cachedTestResults);
 
     if (Boolean(data.test_running)) {
       lastKnownTestRunning = true;
@@ -300,17 +445,6 @@ window.addEventListener("load", () => {
     };
   };
 
-  let socket = null;
-  let reconnectTimer = null;
-  let pollTimer = null;
-  let motorTestPending = false;
-  let lastKnownTestRunning = false;
-  let cachedTestResults = [];
-  let cachedTestResultCount = 0;
-
-  setView("overview");
-  applyDisconnectedState();
-
   const stopPolling = () => {
     if (pollTimer !== null) {
       window.clearInterval(pollTimer);
@@ -342,25 +476,6 @@ window.addEventListener("load", () => {
     pollTimer = window.setInterval(pollStatus, 1000);
   };
 
-  const setMotorTestButtonState = (label, disabled = false) => {
-    if (ui.startMotorTestButton) {
-      ui.startMotorTestButton.textContent = label;
-      ui.startMotorTestButton.disabled = disabled;
-    }
-  };
-
-  const setStopMotorTestButtonState = (disabled = true) => {
-    if (ui.stopMotorTestButton) {
-      ui.stopMotorTestButton.disabled = disabled;
-    }
-  };
-
-  const setDownloadTestButtonState = (disabled = true) => {
-    if (ui.downloadTestButton) {
-      ui.downloadTestButton.disabled = disabled;
-    }
-  };
-
   const runMotorTest = async () => {
     if (!ui.startMotorTestButton || motorTestPending) {
       return;
@@ -372,7 +487,7 @@ window.addEventListener("load", () => {
     setDownloadTestButtonState(true);
     cachedTestResults = [];
     cachedTestResultCount = 0;
-    updateTestChart([]);
+    updateChart(chartContexts.testing, []);
 
     try {
       const body = new URLSearchParams({ cmd: "motor test" });
@@ -440,6 +555,38 @@ window.addEventListener("load", () => {
     link.remove();
   };
 
+  const loadStudyFile = async () => {
+    if (!ui.studyFileSelect || !ui.loadStudyButton || ui.studyFileSelect.disabled) {
+      return;
+    }
+
+    const filename = ui.studyFileSelect.value;
+    if (!filename) {
+      setStudyStatus("Choose a saved CSV first.");
+      return;
+    }
+
+    ui.loadStudyButton.disabled = true;
+    setStudyStatus(`Loading ${filename}...`);
+
+    try {
+      const response = await fetch(`/api/tests/file?name=${encodeURIComponent(filename)}`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      const csv = await response.text();
+      const rows = parseSavedTestCsv(csv);
+      updateChart(chartContexts.study, rows);
+      setStudyStatus(`Loaded ${filename} with ${rows.length} points.`);
+    } catch (error) {
+      updateChart(chartContexts.study, []);
+      setStudyStatus(`Could not load ${filename}.`);
+    } finally {
+      ui.loadStudyButton.disabled = ui.studyFileSelect.disabled;
+    }
+  };
+
   const scheduleReconnect = () => {
     if (reconnectTimer !== null) {
       return;
@@ -505,6 +652,21 @@ window.addEventListener("load", () => {
     });
   };
 
+  links.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      const { viewLink } = link.dataset;
+      if (viewLink) {
+        setView(viewLink);
+      }
+    });
+  });
+
+  setView("overview");
+  applyDisconnectedState();
+  updateChart(chartContexts.testing, []);
+  updateChart(chartContexts.study, []);
+
   startPolling();
   connectWebSocket();
 
@@ -518,5 +680,9 @@ window.addEventListener("load", () => {
 
   if (ui.downloadTestButton) {
     ui.downloadTestButton.addEventListener("click", downloadTestFile);
+  }
+
+  if (ui.loadStudyButton) {
+    ui.loadStudyButton.addEventListener("click", loadStudyFile);
   }
 });

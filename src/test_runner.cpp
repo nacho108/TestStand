@@ -292,6 +292,67 @@ bool printSavedTest(const String& filename) {
     return true;
 }
 
+String buildSavedTestsJson() {
+    String json;
+    json.reserve(256);
+    json += "{\"files\":[";
+
+    File dir = LittleFS.open(kTestStorageDir);
+    if (!dir || !dir.isDirectory()) {
+        json += "]}";
+        return json;
+    }
+
+    bool first = true;
+    for (File entry = dir.openNextFile(); entry; entry = dir.openNextFile()) {
+        if (entry.isDirectory()) {
+            continue;
+        }
+
+        String name = entry.name();
+        const int slashPos = name.lastIndexOf('/');
+        if (slashPos >= 0) {
+            name = name.substring(slashPos + 1);
+        }
+
+        if (!first) {
+            json += ",";
+        }
+        first = false;
+
+        json += "{\"name\":\"";
+        json += name;
+        json += "\",\"size\":";
+        json += String((unsigned long)entry.size());
+        json += "}";
+    }
+
+    json += "]}";
+    return json;
+}
+
+bool loadSavedTestCsv(const String& filename, String& csv) {
+    csv = "";
+
+    const String normalized = normalizeTestFilename(filename);
+    if (normalized.length() == 0) {
+        return false;
+    }
+
+    const String path = buildTestPath(normalized);
+    File file = LittleFS.open(path, FILE_READ);
+    if (!file) {
+        return false;
+    }
+
+    csv.reserve(file.size() + 1);
+    while (file.available()) {
+        csv += (char)file.read();
+    }
+    file.close();
+    return true;
+}
+
 bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
     unsigned long start = millis();
 

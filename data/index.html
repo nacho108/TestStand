@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=8">
+  <link rel="stylesheet" href="/styles.css?v=9">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -25,6 +25,10 @@
         <a class="sidebar__nav-link" href="#testing" data-view-link="testing">
           <span class="nav-icon" aria-hidden="true"></span>
           <span>Testing</span>
+        </a>
+        <a class="sidebar__nav-link" href="#study" data-view-link="study">
+          <span class="nav-icon" aria-hidden="true"></span>
+          <span>Study</span>
         </a>
       </nav>
     </aside>
@@ -155,16 +159,16 @@
           <div class="chart-plot" aria-hidden="true">
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--power" id="chart-left-top-power">--</span>
-                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-top-rpm">--</span>
+                <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-top-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-top-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--power" id="chart-left-mid-power">--</span>
-                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-mid-rpm">--</span>
+                <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-mid-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-mid-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--power" id="chart-left-bottom-power">0 W</span>
-                <span class="chart-scale__value chart-scale__value--rpm" id="chart-left-bottom-rpm">0 rpm</span>
+                <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-bottom-power">0 W</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-bottom-rpm">0 rpm</span>
               </div>
             </div>
             <div class="chart-plot__grid"></div>
@@ -172,30 +176,106 @@
             <div class="chart-plot__axis chart-plot__axis--x"></div>
             <div class="chart-scale chart-scale--right">
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-top-thrust">--</span>
-                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-top-temp">--</span>
+                <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-top-temp">--</span>
               </div>
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-mid-thrust">--</span>
-                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-mid-temp">--</span>
+                <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-mid-temp">--</span>
               </div>
               <div class="chart-scale__tick">
-                <span class="chart-scale__value chart-scale__value--thrust" id="chart-right-bottom-thrust">0 g</span>
-                <span class="chart-scale__value chart-scale__value--temp" id="chart-right-bottom-temp">0 C</span>
+                <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-bottom-temp">0 C</span>
               </div>
             </div>
             <span class="chart-plot__xlabel">Throttle %</span>
             <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
+              <path id="testing-chart-thrust-path" d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
             </svg>
             <svg class="chart-line chart-line--power" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M0,96 C12,92 24,85 40,74 S72,48 100,28"></path>
+              <path id="testing-chart-power-path" d="M0,96 C12,92 24,85 40,74 S72,48 100,28"></path>
             </svg>
             <svg class="chart-line chart-line--rpm" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M0,92 C18,85 30,72 48,58 S74,32 100,10"></path>
+              <path id="testing-chart-rpm-path" d="M0,92 C18,85 30,72 48,58 S74,32 100,10"></path>
             </svg>
             <svg class="chart-line chart-line--temp" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path d="M0,98 C20,97 34,90 52,78 S78,50 100,34"></path>
+              <path id="testing-chart-temp-path" d="M0,98 C20,97 34,90 52,78 S78,50 100,34"></path>
+            </svg>
+            <div class="chart-ticks">
+              <span>0</span>
+              <span>25</span>
+              <span>50</span>
+              <span>75</span>
+              <span>100</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="testing-extras" data-view-pane="study" hidden>
+        <div class="study-toolbar">
+          <label class="study-toolbar__field" for="study-file-select">
+            <span class="study-toolbar__label">Saved test</span>
+            <select id="study-file-select"></select>
+          </label>
+          <button class="test-button" id="load-study-button" type="button">Load file</button>
+          <span class="study-toolbar__status" id="study-status">Choose a saved CSV to inspect.</span>
+        </div>
+
+        <article class="chart-card">
+          <div class="chart-card__header">
+            <h3>Stored test curves</h3>
+          </div>
+          <div class="chart-card__legend">
+            <span class="legend-thrust">Thrust</span>
+            <span class="legend-power">Watts</span>
+            <span class="legend-rpm">RPM</span>
+            <span class="legend-temp">Motor temp</span>
+          </div>
+          <div class="chart-plot" aria-hidden="true">
+            <div class="chart-scale chart-scale--left">
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-top-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-top-rpm">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-mid-power">--</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-mid-rpm">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-bottom-power">0 W</span>
+                <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-bottom-rpm">0 rpm</span>
+              </div>
+            </div>
+            <div class="chart-plot__grid"></div>
+            <div class="chart-plot__axis chart-plot__axis--y"></div>
+            <div class="chart-plot__axis chart-plot__axis--x"></div>
+            <div class="chart-scale chart-scale--right">
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-top-temp">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-mid-temp">--</span>
+              </div>
+              <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-bottom-temp">0 C</span>
+              </div>
+            </div>
+            <span class="chart-plot__xlabel">Throttle %</span>
+            <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path id="study-chart-thrust-path" d="M0,100 L100,100"></path>
+            </svg>
+            <svg class="chart-line chart-line--power" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path id="study-chart-power-path" d="M0,100 L100,100"></path>
+            </svg>
+            <svg class="chart-line chart-line--rpm" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path id="study-chart-rpm-path" d="M0,100 L100,100"></path>
+            </svg>
+            <svg class="chart-line chart-line--temp" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path id="study-chart-temp-path" d="M0,100 L100,100"></path>
             </svg>
             <div class="chart-ticks">
               <span>0</span>
@@ -210,6 +290,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=8"></script>
+  <script src="/app.js?v=9"></script>
 </body>
 </html>

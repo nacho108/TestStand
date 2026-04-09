@@ -14,3 +14,5 @@ bool saveLastTestToLittleFS(const String& filename);
 void listSavedTests();
 bool removeSavedTest(const String& filename);
 bool printSavedTest(const String& filename);
+String buildSavedTestsJson();
+bool loadSavedTestCsv(const String& filename, String& csv);
