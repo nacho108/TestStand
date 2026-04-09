@@ -297,6 +297,10 @@ bool runMotorTest() {
     Serial.println("Press X for emergency ramp-down");
 
     for (int step = 0; step <= 100; step += TEST_STEP_PERCENT) {
+        if (step > 0) {
+            authorizeMotorOutput();
+        }
+
         unsigned long rampDurationMs = calculateThrottleRampDurationMs(throttlePercent, (float)step);
 
         Serial.print("Testing throttle ");

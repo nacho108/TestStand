@@ -6,9 +6,20 @@
 #include "app_state.h"
 
 namespace {
+bool escPwmAttached = false;
+
 void driveEscSignalLow() {
     pinMode(ESC_PWM_PIN, OUTPUT);
     digitalWrite(ESC_PWM_PIN, LOW);
+}
+
+void attachEscPwmOutput() {
+    if (escPwmAttached) {
+        return;
+    }
+
+    ledcAttachPin(ESC_PWM_PIN, PWM_CHANNEL);
+    escPwmAttached = true;
 }
 
 bool canDriveEscAboveIdle() {
@@ -21,7 +32,7 @@ void beginMotorControl() {
     delay(20);
     ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
     ledcWrite(PWM_CHANNEL, microsecondsToDuty(1000));
-    ledcAttachPin(ESC_PWM_PIN, PWM_CHANNEL);
+    attachEscPwmOutput();
     stopMotorImmediate();
 }
 
@@ -30,6 +41,7 @@ uint32_t microsecondsToDuty(int us) {
 }
 
 void authorizeMotorOutput() {
+    attachEscPwmOutput();
     motorOutputAuthorized = true;
     motorOutputRevokeWhenIdle = false;
 }
@@ -45,6 +57,7 @@ void holdEscOutputLow() {
     throttlePercent = 0.0f;
     ledcWrite(PWM_CHANNEL, 0);
     ledcDetachPin(ESC_PWM_PIN);
+    escPwmAttached = false;
     driveEscSignalLow();
 }
 
