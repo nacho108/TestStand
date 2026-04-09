@@ -215,11 +215,18 @@ window.addEventListener("load", () => {
     const maxRpm = getSeriesMax(rows, "rpm");
     const maxThrust = getSeriesMax(rows, "thrust_grams");
     const maxTemp = getSeriesMax(rows, "motor_temperature_c");
+    const hideThrustScale = context.xAxisKey === "thrust_grams";
 
     setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, maxPower, "W", 0);
     setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, maxRpm, "rpm", 0);
     setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, maxThrust, "g", 0);
     setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, maxTemp, "C", 1);
+
+    [context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust].forEach((element) => {
+      if (element) {
+        element.style.display = hideThrustScale ? "none" : "";
+      }
+    });
   };
 
   const updateXAxis = (context, rows) => {
