@@ -3,6 +3,7 @@ window.addEventListener("load", () => {
     viewTitle: document.getElementById("view-title"),
     startMotorTestButton: document.getElementById("start-motor-test-button"),
     stopMotorTestButton: document.getElementById("stop-motor-test-button"),
+    downloadTestButton: document.getElementById("download-test-button"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -118,6 +119,9 @@ window.addEventListener("load", () => {
     setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
     if (ui.stopMotorTestButton) {
       ui.stopMotorTestButton.disabled = true;
+    }
+    if (ui.downloadTestButton) {
+      ui.downloadTestButton.disabled = true;
     }
   };
 
@@ -247,11 +251,13 @@ window.addEventListener("load", () => {
       motorTestPending = true;
       setMotorTestButtonState("Test running...", true);
       setStopMotorTestButtonState(false);
+      setDownloadTestButtonState(true);
     } else {
       lastKnownTestRunning = false;
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
       setStopMotorTestButtonState(true);
+      setDownloadTestButtonState(resultCount === 0);
     }
 
     if (hasTelemetry) {
@@ -349,6 +355,12 @@ window.addEventListener("load", () => {
     }
   };
 
+  const setDownloadTestButtonState = (disabled = true) => {
+    if (ui.downloadTestButton) {
+      ui.downloadTestButton.disabled = disabled;
+    }
+  };
+
   const runMotorTest = async () => {
     if (!ui.startMotorTestButton || motorTestPending) {
       return;
@@ -357,6 +369,7 @@ window.addEventListener("load", () => {
     motorTestPending = true;
     setMotorTestButtonState("Starting...", true);
     setStopMotorTestButtonState(true);
+    setDownloadTestButtonState(true);
     cachedTestResults = [];
     cachedTestResultCount = 0;
     updateTestChart([]);
@@ -414,6 +427,19 @@ window.addEventListener("load", () => {
     }
   };
 
+  const downloadTestFile = () => {
+    if (!ui.downloadTestButton || ui.downloadTestButton.disabled) {
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = "/api/test.csv";
+    link.download = "test_results.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   const scheduleReconnect = () => {
     if (reconnectTimer !== null) {
       return;
@@ -453,10 +479,12 @@ window.addEventListener("load", () => {
           motorTestPending = false;
           setMotorTestButtonState("Start test", false);
           setStopMotorTestButtonState(true);
+          setDownloadTestButtonState((Number(data.test_result_count) || 0) === 0);
         } else {
           lastKnownTestRunning = true;
           setMotorTestButtonState("Test running...", true);
           setStopMotorTestButtonState(false);
+          setDownloadTestButtonState(true);
         }
       } catch (error) {
         setHealth(ui.powerHealth, "Malformed live payload", "error");
@@ -486,5 +514,9 @@ window.addEventListener("load", () => {
 
   if (ui.stopMotorTestButton) {
     ui.stopMotorTestButton.addEventListener("click", stopMotorTest);
+  }
+
+  if (ui.downloadTestButton) {
+    ui.downloadTestButton.addEventListener("click", downloadTestFile);
   }
 });

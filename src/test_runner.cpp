@@ -128,6 +128,10 @@ bool hasTestResults() {
     return testResultCount > 0;
 }
 
+String getLastTestCsv() {
+    return buildTestCsv();
+}
+
 String normalizeTestFilename(const String& filename) {
     String trimmed = filename;
     trimmed.trim();

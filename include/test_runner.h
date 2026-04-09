@@ -8,6 +8,7 @@ bool runMotorTest();
 void requestMotorTestStop();
 bool isMotorTestStopRequested();
 bool hasTestResults();
+String getLastTestCsv();
 String normalizeTestFilename(const String& filename);
 bool saveLastTestToLittleFS(const String& filename);
 void listSavedTests();

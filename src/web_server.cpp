@@ -15,6 +15,7 @@
 #include "esc_telemetry.h"
 #include "ir_manager.h"
 #include "app_config.h"
+#include "test_runner.h"
 
 namespace {
 
@@ -615,6 +616,20 @@ bool beginWebServer() {
 
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
         request->send(200, "application/json", buildStatusJson());
+    });
+
+    server.on("/api/test.csv", HTTP_GET, [](AsyncWebServerRequest* request) {
+        if (!hasTestResults()) {
+            request->send(404, "text/plain", "No test results available");
+            return;
+        }
+
+        AsyncWebServerResponse* response = request->beginResponse(200, "text/csv", getLastTestCsv());
+        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+        response->addHeader("Pragma", "no-cache");
+        response->addHeader("Expires", "0");
+        response->addHeader("Content-Disposition", "attachment; filename=\"test_results.csv\"");
+        request->send(response);
     });
 
     server.on("/api/command", HTTP_POST, [](AsyncWebServerRequest* request) {
