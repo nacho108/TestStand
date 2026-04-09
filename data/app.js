@@ -184,6 +184,11 @@ window.addEventListener("load", () => {
     }, 0);
   };
 
+  const getAxisMax = (rows, valueKey, fallback = 0) => {
+    const maxValue = getSeriesMax(rows, valueKey);
+    return maxValue > 0 ? maxValue : fallback;
+  };
+
   const flattenStudyRows = (datasets, visibleOnly = false) => {
     if (!Array.isArray(datasets) || datasets.length === 0) {
       return [];
@@ -250,7 +255,7 @@ window.addEventListener("load", () => {
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
 
-  const buildChartPath = (rows, valueKey, xKey = "throttle_percent") => {
+  const buildChartPath = (rows, valueKey, xKey = "throttle_percent", axisMax = {}) => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return "M0,100 L100,100";
     }
@@ -271,12 +276,19 @@ window.addEventListener("load", () => {
       return "M0,100 L100,100";
     }
 
+    const hasOriginPoint = points.some((point) => point.x === 0);
+    if (!hasOriginPoint) {
+      points.push({ x: 0, y: 0 });
+    }
+
     points.sort((a, b) => a.x - b.x);
 
-    const maxX = points.reduce((max, point) => Math.max(max, point.x), 0);
-    const maxY = points.reduce((max, point) => Math.max(max, point.y), 0);
-    const safeMaxX = maxX > 0 ? maxX : 1;
-    const safeMaxY = maxY > 0 ? maxY : 1;
+    const maxX = Number(axisMax.x);
+    const maxY = Number(axisMax.y);
+    const derivedMaxX = points.reduce((max, point) => Math.max(max, point.x), 0);
+    const derivedMaxY = points.reduce((max, point) => Math.max(max, point.y), 0);
+    const safeMaxX = Number.isFinite(maxX) && maxX > 0 ? maxX : (derivedMaxX > 0 ? derivedMaxX : 1);
+    const safeMaxY = Number.isFinite(maxY) && maxY > 0 ? maxY : (derivedMaxY > 0 ? derivedMaxY : 1);
 
     return points
       .map((point, index) => {
@@ -289,38 +301,61 @@ window.addEventListener("load", () => {
       .join(" ");
   };
 
+  const getChartAxisBounds = (rows, xAxisKey) => ({
+    x: xAxisKey === "thrust_grams"
+      ? getAxisMax(rows, "thrust_grams", 1)
+      : 100,
+    thrust: getAxisMax(rows, "thrust_grams", 1),
+    power: getAxisMax(rows, "power_w", 1),
+    rpm: getAxisMax(rows, "rpm", 1),
+    temp: getAxisMax(rows, "motor_temperature_c", 1)
+  });
+
   const updateChart = (context, rows) => {
     updateChartScales(context, rows);
     updateXAxis(context, rows);
     const xAxisKey = context.xAxisKey || "throttle_percent";
     const visibleSeries = context.visibleSeries || {};
     const hideThrustSeries = xAxisKey === "thrust_grams";
+    const axisBounds = getChartAxisBounds(rows, xAxisKey);
 
     if (context.thrustPath) {
-      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey));
+      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey, {
+        x: axisBounds.x,
+        y: axisBounds.thrust
+      }));
       context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerPath) {
-      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey));
+      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey, {
+        x: axisBounds.x,
+        y: axisBounds.power
+      }));
       context.powerPath.parentElement.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.rpmPath) {
-      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey));
+      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey, {
+        x: axisBounds.x,
+        y: axisBounds.rpm
+      }));
       context.rpmPath.parentElement.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempPath) {
-      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey));
+      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey, {
+        x: axisBounds.x,
+        y: axisBounds.temp
+      }));
       context.tempPath.parentElement.style.display = visibleSeries.temp === false ? "none" : "";
     }
   };
 
-  const buildStudyLayerMarkup = (datasets, valueKey, xKey, className) => datasets
+  const buildStudyLayerMarkup = (datasets, valueKey, xKey, className, axisMax) => datasets
     .map((dataset) => {
       const hidden = dataset.visible === false ? " style=\"display:none\"" : "";
-      return `<svg class="chart-line ${className}" viewBox="0 0 100 100" preserveAspectRatio="none" data-study-dataset-id="${escapeHtml(dataset.id)}"${hidden}><path d="${escapeHtml(buildChartPath(dataset.rows, valueKey, xKey))}"></path></svg>`;
+      return `<svg class="chart-study-line ${className}" viewBox="0 0 100 100" preserveAspectRatio="none" data-study-dataset-id="${escapeHtml(dataset.id)}"${hidden}><path d="${escapeHtml(buildChartPath(dataset.rows, valueKey, xKey, axisMax))}"></path></svg>`;
     })
     .join("");
 
@@ -375,24 +410,37 @@ window.addEventListener("load", () => {
     const xAxisKey = context.xAxisKey || "throttle_percent";
     const visibleSeries = context.visibleSeries || {};
     const hideThrustSeries = xAxisKey === "thrust_grams";
+    const axisBounds = getChartAxisBounds(rows, xAxisKey);
 
     if (context.thrustLayer) {
-      context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_grams", xAxisKey, "chart-line--thrust");
+      context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_grams", xAxisKey, "chart-line--thrust", {
+        x: axisBounds.x,
+        y: axisBounds.thrust
+      });
       context.thrustLayer.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerLayer) {
-      context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "power_w", xAxisKey, "chart-line--power");
+      context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "power_w", xAxisKey, "chart-line--power", {
+        x: axisBounds.x,
+        y: axisBounds.power
+      });
       context.powerLayer.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.rpmLayer) {
-      context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "rpm", xAxisKey, "chart-line--rpm");
+      context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "rpm", xAxisKey, "chart-line--rpm", {
+        x: axisBounds.x,
+        y: axisBounds.rpm
+      });
       context.rpmLayer.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempLayer) {
-      context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "motor_temperature_c", xAxisKey, "chart-line--temp");
+      context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "motor_temperature_c", xAxisKey, "chart-line--temp", {
+        x: axisBounds.x,
+        y: axisBounds.temp
+      });
       context.tempLayer.style.display = visibleSeries.temp === false ? "none" : "";
     }
 
