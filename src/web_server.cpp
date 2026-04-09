@@ -725,22 +725,32 @@ void updateWebServer() {
 
     if (!apModeActive) {
         if (WiFi.status() == WL_CONNECTED) {
+            stationConnectStartMs = 0;
             if (!stationConnectedAnnounced) {
                 printStationConnectedMessage();
                 stationConnectedAnnounced = true;
             }
-        } else if (stationConnectStartMs != 0 && millis() - stationConnectStartMs >= WIFI_CONNECT_TIMEOUT_MS) {
-            if (connectingWifiIndex >= 0 && connectingWifiIndex + 1 < savedWifiCount) {
-                Serial.print("Wi-Fi station connect timed out for ");
-                Serial.print(savedWifiSsids[connectingWifiIndex]);
-                Serial.println(". Trying next saved network.");
-                if (!startSavedWifiConnectionByIndex(connectingWifiIndex + 1)) {
-                    Serial.println("No additional saved Wi-Fi networks are currently visible. Falling back to AP mode.");
+        } else {
+            if (stationConnectedAnnounced && stationConnectStartMs == 0) {
+                // A previously healthy STA link dropped, so start a fresh recovery window.
+                stationConnectStartMs = millis();
+                stationConnectedAnnounced = false;
+                Serial.println("Wi-Fi station disconnected. Waiting for reconnection before AP fallback.");
+            }
+
+            if (stationConnectStartMs != 0 && millis() - stationConnectStartMs >= WIFI_CONNECT_TIMEOUT_MS) {
+                if (connectingWifiIndex >= 0 && connectingWifiIndex + 1 < savedWifiCount) {
+                    Serial.print("Wi-Fi station connect timed out for ");
+                    Serial.print(savedWifiSsids[connectingWifiIndex]);
+                    Serial.println(". Trying next saved network.");
+                    if (!startSavedWifiConnectionByIndex(connectingWifiIndex + 1)) {
+                        Serial.println("No additional saved Wi-Fi networks are currently visible. Falling back to AP mode.");
+                        startAccessPointMode();
+                    }
+                } else {
+                    Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
                     startAccessPointMode();
                 }
-            } else {
-                Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
-                startAccessPointMode();
             }
         }
     }

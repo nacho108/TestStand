@@ -178,6 +178,10 @@ body::before {
   gap: 12px;
 }
 
+.group-grid[hidden] {
+  display: none;
+}
+
 .group-card {
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.72);
