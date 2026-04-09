@@ -264,11 +264,14 @@ window.addEventListener("load", () => {
       .map((row) => {
         const x = Number(row?.[xKey]);
         const y = Number(row?.[valueKey]);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        if (!Number.isFinite(x)) {
           return null;
         }
 
-        return { x, y };
+        return {
+          x,
+          y: Number.isFinite(y) ? y : 0
+        };
       })
       .filter(Boolean);
 
@@ -289,11 +292,15 @@ window.addEventListener("load", () => {
     const derivedMaxY = points.reduce((max, point) => Math.max(max, point.y), 0);
     const safeMaxX = Number.isFinite(maxX) && maxX > 0 ? maxX : (derivedMaxX > 0 ? derivedMaxX : 1);
     const safeMaxY = Number.isFinite(maxY) && maxY > 0 ? maxY : (derivedMaxY > 0 ? derivedMaxY : 1);
+    const plotPaddingX = 1.5;
+    const plotPaddingY = 1.5;
+    const plotWidth = 100 - plotPaddingX * 2;
+    const plotHeight = 100 - plotPaddingY * 2;
 
     return points
       .map((point, index) => {
-        const px = (point.x / safeMaxX) * 100;
-        const py = 100 - (point.y / safeMaxY) * 100;
+        const px = plotPaddingX + (point.x / safeMaxX) * plotWidth;
+        const py = 100 - plotPaddingY - (point.y / safeMaxY) * plotHeight;
         const clampedX = Math.max(0, Math.min(100, px));
         const clampedY = Math.max(0, Math.min(100, py));
         return `${index === 0 ? "M" : "L"}${clampedX.toFixed(2)},${clampedY.toFixed(2)}`;

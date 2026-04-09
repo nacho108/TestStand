@@ -450,9 +450,7 @@ body::before {
 
 .chart-plot--study .chart-line,
 .chart-plot--study .chart-line-layer {
-  left: 332px;
-  right: 204px;
-  width: calc(100% - 536px);
+  inset: 18px 204px 36px 332px;
 }
 
 .chart-plot--study .chart-ticks {
@@ -512,12 +510,7 @@ body::before {
 
 .chart-line {
   position: absolute;
-  left: 92px;
-  right: 92px;
-  top: 18px;
-  bottom: 36px;
-  width: calc(100% - 184px);
-  height: auto;
+  inset: 18px 92px 36px 92px;
   fill: none;
   stroke-width: 1.5;
   opacity: 0.96;
@@ -525,12 +518,7 @@ body::before {
 
 .chart-line-layer {
   position: absolute;
-  left: 92px;
-  right: 92px;
-  top: 18px;
-  bottom: 36px;
-  width: calc(100% - 184px);
-  height: auto;
+  inset: 18px 92px 36px 92px;
   pointer-events: none;
 }
 
@@ -794,10 +782,7 @@ body::before {
 
   .chart-plot--study .chart-line,
   .chart-plot--study .chart-line-layer {
-    left: 92px;
-    right: 92px;
-    bottom: 120px;
-    width: calc(100% - 184px);
+    inset: 188px 92px 120px 92px;
   }
 
   .chart-plot--study .chart-ticks {
