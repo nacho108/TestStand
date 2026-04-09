@@ -7,6 +7,7 @@ window.addEventListener("load", () => {
     studyFileSelect: document.getElementById("study-file-select"),
     loadStudyButton: document.getElementById("load-study-button"),
     openStudyFileButton: document.getElementById("open-study-file-button"),
+    clearStudyButton: document.getElementById("clear-study-button"),
     studyLocalFileInput: document.getElementById("study-local-file-input"),
     studyStatus: document.getElementById("study-status"),
     studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
@@ -809,6 +810,14 @@ window.addEventListener("load", () => {
     ui.studyLocalFileInput.click();
   };
 
+  const clearStudyGraph = () => {
+    studyDatasets = [];
+    updateStudyChart();
+    setStudyStatus(savedTestFiles.length > 0
+      ? "Choose a saved CSV and load it into the chart."
+      : "No saved CSV files found in storage.");
+  };
+
   const loadStudyFileFromPc = async (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) {
@@ -948,6 +957,10 @@ window.addEventListener("load", () => {
 
   if (ui.openStudyFileButton) {
     ui.openStudyFileButton.addEventListener("click", openStudyFilePicker);
+  }
+
+  if (ui.clearStudyButton) {
+    ui.clearStudyButton.addEventListener("click", clearStudyGraph);
   }
 
   if (ui.studyLocalFileInput) {
