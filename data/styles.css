@@ -431,6 +431,27 @@ body::before {
   background: rgba(255, 255, 255, 0.88);
 }
 
+.chart-plot--study .chart-plot__grid {
+  inset: 18px 204px 36px 92px;
+}
+
+.chart-plot--study .chart-plot__axis--x {
+  right: 204px;
+}
+
+.chart-plot--study .chart-line {
+  right: 204px;
+  width: calc(100% - 296px);
+}
+
+.chart-plot--study .chart-ticks {
+  right: 204px;
+}
+
+.chart-plot--study .chart-scale--right {
+  right: 120px;
+}
+
 .chart-plot__grid {
   position: absolute;
   inset: 18px 92px 36px 92px;
@@ -546,6 +567,43 @@ body::before {
 .chart-scale__value--rpm { color: #2ea9b8; }
 .chart-scale__value--temp { color: #ff7c5c; }
 
+.chart-axis-picker {
+  position: absolute;
+  top: 18px;
+  right: 8px;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: 100px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 74, 112, 0.12);
+  border-radius: 4px;
+  background: rgba(237, 243, 251, 0.96);
+}
+
+.chart-axis-picker__title {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-axis-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.chart-axis-picker__option input {
+  margin: 0;
+}
+
 @media (max-width: 1180px) {
   .group-grid {
     grid-template-columns: 1fr;
@@ -569,5 +627,45 @@ body::before {
 
   .sidebar {
     padding: 18px 12px 0;
+  }
+
+  .chart-plot--study .chart-plot__grid {
+    inset: 18px 92px 120px 92px;
+  }
+
+  .chart-plot--study .chart-plot__axis--y {
+    bottom: 120px;
+  }
+
+  .chart-plot--study .chart-plot__axis--x {
+    right: 92px;
+    bottom: 120px;
+  }
+
+  .chart-plot--study .chart-line {
+    right: 92px;
+    bottom: 120px;
+    width: calc(100% - 184px);
+  }
+
+  .chart-plot--study .chart-ticks {
+    right: 92px;
+    bottom: 96px;
+  }
+
+  .chart-plot--study .chart-scale {
+    bottom: 120px;
+  }
+
+  .chart-plot--study .chart-scale--right {
+    right: 8px;
+  }
+
+  .chart-axis-picker {
+    top: auto;
+    right: 8px;
+    bottom: 12px;
+    width: auto;
+    min-width: 120px;
   }
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=10">
+  <link rel="stylesheet" href="/styles.css?v=11">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -234,7 +234,7 @@
             <span class="legend-rpm">RPM</span>
             <span class="legend-temp">Motor temp</span>
           </div>
-          <div class="chart-plot" aria-hidden="true">
+          <div class="chart-plot chart-plot--study">
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-top-power">--</span>
@@ -266,6 +266,17 @@
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-bottom-temp">0 C</span>
               </div>
             </div>
+            <fieldset class="chart-axis-picker">
+              <legend class="chart-axis-picker__title">X axis</legend>
+              <label class="chart-axis-picker__option" for="study-x-axis-throttle">
+                <input id="study-x-axis-throttle" type="radio" name="study-x-axis" value="throttle_percent" checked>
+                <span>Throttle</span>
+              </label>
+              <label class="chart-axis-picker__option" for="study-x-axis-thrust">
+                <input id="study-x-axis-thrust" type="radio" name="study-x-axis" value="thrust_grams">
+                <span>Thrust</span>
+              </label>
+            </fieldset>
             <span class="chart-plot__xlabel">Throttle %</span>
             <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
               <path id="study-chart-thrust-path" d="M0,100 L100,100"></path>
@@ -280,11 +291,11 @@
               <path id="study-chart-temp-path" d="M0,100 L100,100"></path>
             </svg>
             <div class="chart-ticks">
-              <span>0</span>
-              <span>25</span>
-              <span>50</span>
-              <span>75</span>
-              <span>100</span>
+              <span id="study-chart-tick-0">0</span>
+              <span id="study-chart-tick-1">25</span>
+              <span id="study-chart-tick-2">50</span>
+              <span id="study-chart-tick-3">75</span>
+              <span id="study-chart-tick-4">100</span>
             </div>
           </div>
         </article>
@@ -292,6 +303,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=10"></script>
+  <script src="/app.js?v=11"></script>
 </body>
 </html>

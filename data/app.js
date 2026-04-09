@@ -9,6 +9,7 @@ window.addEventListener("load", () => {
     openStudyFileButton: document.getElementById("open-study-file-button"),
     studyLocalFileInput: document.getElementById("study-local-file-input"),
     studyStatus: document.getElementById("study-status"),
+    studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -67,7 +68,16 @@ window.addEventListener("load", () => {
       rightBottomThrust: document.getElementById("study-chart-right-bottom-thrust"),
       rightTopTemp: document.getElementById("study-chart-right-top-temp"),
       rightMidTemp: document.getElementById("study-chart-right-mid-temp"),
-      rightBottomTemp: document.getElementById("study-chart-right-bottom-temp")
+      rightBottomTemp: document.getElementById("study-chart-right-bottom-temp"),
+      xLabel: document.querySelector('[data-view-pane="study"] .chart-plot__xlabel'),
+      xTicks: [
+        document.getElementById("study-chart-tick-0"),
+        document.getElementById("study-chart-tick-1"),
+        document.getElementById("study-chart-tick-2"),
+        document.getElementById("study-chart-tick-3"),
+        document.getElementById("study-chart-tick-4")
+      ],
+      xAxisKey: "throttle_percent"
     }
   };
 
@@ -87,6 +97,7 @@ window.addEventListener("load", () => {
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
   let savedTestFiles = [];
+  let studyRows = [];
 
   const setText = (element, value) => {
     if (element) {
@@ -138,6 +149,15 @@ window.addEventListener("load", () => {
     setText(bottomElement, formatScaleValue(0, unit, digits));
   };
 
+  const formatAxisTick = (value, unit = "", digits = 0) => {
+    if (!Number.isFinite(value)) {
+      return "--";
+    }
+
+    const suffix = unit ? ` ${unit}` : "";
+    return `${Number(value).toFixed(digits)}${suffix}`;
+  };
+
   const getSeriesMax = (rows, valueKey) => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return 0;
@@ -165,14 +185,33 @@ window.addEventListener("load", () => {
     setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, maxTemp, "C", 1);
   };
 
-  const buildChartPath = (rows, valueKey) => {
+  const updateXAxis = (context, rows) => {
+    if (!context.xLabel || !Array.isArray(context.xTicks) || context.xTicks.length === 0) {
+      return;
+    }
+
+    const isThrustAxis = context.xAxisKey === "thrust_grams";
+    const unit = isThrustAxis ? "g" : "";
+    const digits = isThrustAxis ? 0 : 0;
+    const maxValue = isThrustAxis
+      ? getSeriesMax(rows, "thrust_grams")
+      : 100;
+
+    setText(context.xLabel, isThrustAxis ? "Thrust" : "Throttle %");
+    context.xTicks.forEach((tick, index) => {
+      const ratio = context.xTicks.length === 1 ? 0 : index / (context.xTicks.length - 1);
+      setText(tick, formatAxisTick(maxValue * ratio, unit, digits));
+    });
+  };
+
+  const buildChartPath = (rows, valueKey, xKey = "throttle_percent") => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return "M0,100 L100,100";
     }
 
     const points = rows
       .map((row) => {
-        const x = Number(row?.throttle_percent);
+        const x = Number(row?.[xKey]);
         const y = Number(row?.[valueKey]);
         if (!Number.isFinite(x) || !Number.isFinite(y)) {
           return null;
@@ -186,36 +225,43 @@ window.addEventListener("load", () => {
       return "M0,100 L100,100";
     }
 
+    points.sort((a, b) => a.x - b.x);
+
+    const maxX = points.reduce((max, point) => Math.max(max, point.x), 0);
     const maxY = points.reduce((max, point) => Math.max(max, point.y), 0);
+    const safeMaxX = maxX > 0 ? maxX : 1;
     const safeMaxY = maxY > 0 ? maxY : 1;
 
     return points
       .map((point, index) => {
-        const px = Math.max(0, Math.min(100, point.x));
+        const px = (point.x / safeMaxX) * 100;
         const py = 100 - (point.y / safeMaxY) * 100;
+        const clampedX = Math.max(0, Math.min(100, px));
         const clampedY = Math.max(0, Math.min(100, py));
-        return `${index === 0 ? "M" : "L"}${px.toFixed(2)},${clampedY.toFixed(2)}`;
+        return `${index === 0 ? "M" : "L"}${clampedX.toFixed(2)},${clampedY.toFixed(2)}`;
       })
       .join(" ");
   };
 
   const updateChart = (context, rows) => {
     updateChartScales(context, rows);
+    updateXAxis(context, rows);
+    const xAxisKey = context.xAxisKey || "throttle_percent";
 
     if (context.thrustPath) {
-      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams"));
+      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey));
     }
 
     if (context.powerPath) {
-      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w"));
+      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey));
     }
 
     if (context.rpmPath) {
-      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm"));
+      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey));
     }
 
     if (context.tempPath) {
-      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c"));
+      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey));
     }
   };
 
@@ -307,7 +353,8 @@ window.addEventListener("load", () => {
       if (ui.loadStudyButton) {
         ui.loadStudyButton.disabled = true;
       }
-      updateChart(chartContexts.study, []);
+      studyRows = [];
+      updateChart(chartContexts.study, studyRows);
       return;
     }
 
@@ -579,10 +626,12 @@ window.addEventListener("load", () => {
 
       const csv = await response.text();
       const rows = parseSavedTestCsv(csv);
-      updateChart(chartContexts.study, rows);
+      studyRows = rows;
+      updateChart(chartContexts.study, studyRows);
       setStudyStatus(`Loaded ${filename} with ${rows.length} points.`);
     } catch (error) {
-      updateChart(chartContexts.study, []);
+      studyRows = [];
+      updateChart(chartContexts.study, studyRows);
       setStudyStatus(`Could not load ${filename}.`);
     } finally {
       ui.loadStudyButton.disabled = ui.studyFileSelect.disabled;
@@ -609,10 +658,12 @@ window.addEventListener("load", () => {
     try {
       const csv = await file.text();
       const rows = parseSavedTestCsv(csv);
-      updateChart(chartContexts.study, rows);
+      studyRows = rows;
+      updateChart(chartContexts.study, studyRows);
       setStudyStatus(`Loaded ${file.name} from PC with ${rows.length} points.`);
     } catch (error) {
-      updateChart(chartContexts.study, []);
+      studyRows = [];
+      updateChart(chartContexts.study, studyRows);
       setStudyStatus(`Could not load ${file.name} from PC.`);
     } finally {
       event.target.value = "";
@@ -724,5 +775,18 @@ window.addEventListener("load", () => {
 
   if (ui.studyLocalFileInput) {
     ui.studyLocalFileInput.addEventListener("change", loadStudyFileFromPc);
+  }
+
+  if (ui.studyXAxisInputs.length > 0) {
+    ui.studyXAxisInputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        if (!input.checked) {
+          return;
+        }
+
+        chartContexts.study.xAxisKey = input.value === "thrust_grams" ? "thrust_grams" : "throttle_percent";
+        updateChart(chartContexts.study, studyRows);
+      });
+    });
   }
 });
