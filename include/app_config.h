@@ -28,6 +28,18 @@ static constexpr float DEFAULT_VOLTAGE_SCALE = 1.0f;
 static constexpr float DEFAULT_VOLTAGE_OFFSET = 0.0f;
 static constexpr float DEFAULT_CURRENT_SCALE = 1.0f;
 static constexpr float DEFAULT_CURRENT_OFFSET = 0.0f;
+static constexpr bool DEFAULT_VOLTAGE_LOW_CAPTURED = true;
+static constexpr bool DEFAULT_VOLTAGE_HIGH_CAPTURED = true;
+static constexpr float DEFAULT_VOLTAGE_LOW_RAW = 8.83f;
+static constexpr float DEFAULT_VOLTAGE_LOW_REAL = 9.0f;
+static constexpr float DEFAULT_VOLTAGE_HIGH_RAW = 44.57f;
+static constexpr float DEFAULT_VOLTAGE_HIGH_REAL = 45.0f;
+static constexpr bool DEFAULT_CURRENT_LOW_CAPTURED = true;
+static constexpr bool DEFAULT_CURRENT_HIGH_CAPTURED = false;
+static constexpr float DEFAULT_CURRENT_LOW_RAW = 0.0f;
+static constexpr float DEFAULT_CURRENT_LOW_REAL = 0.14f;
+static constexpr float DEFAULT_CURRENT_HIGH_RAW = 0.0f;
+static constexpr float DEFAULT_CURRENT_HIGH_REAL = 0.0f;
 
 static constexpr int DEFAULT_MOTOR_POLES = 28;
 

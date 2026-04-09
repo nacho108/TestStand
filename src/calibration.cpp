@@ -123,21 +123,21 @@ bool recomputeCalibration(LinearCalibration& cal) {
 void setCalibrationDefaults() {
     voltageCal.scale = DEFAULT_VOLTAGE_SCALE;
     voltageCal.offset = DEFAULT_VOLTAGE_OFFSET;
-    voltageCal.lowCaptured = false;
-    voltageCal.highCaptured = false;
-    voltageCal.lowRaw = 0.0f;
-    voltageCal.lowReal = 0.0f;
-    voltageCal.highRaw = 0.0f;
-    voltageCal.highReal = 0.0f;
+    voltageCal.lowCaptured = DEFAULT_VOLTAGE_LOW_CAPTURED;
+    voltageCal.highCaptured = DEFAULT_VOLTAGE_HIGH_CAPTURED;
+    voltageCal.lowRaw = DEFAULT_VOLTAGE_LOW_RAW;
+    voltageCal.lowReal = DEFAULT_VOLTAGE_LOW_REAL;
+    voltageCal.highRaw = DEFAULT_VOLTAGE_HIGH_RAW;
+    voltageCal.highReal = DEFAULT_VOLTAGE_HIGH_REAL;
 
     currentCal.scale = DEFAULT_CURRENT_SCALE;
     currentCal.offset = DEFAULT_CURRENT_OFFSET;
-    currentCal.lowCaptured = false;
-    currentCal.highCaptured = false;
-    currentCal.lowRaw = 0.0f;
-    currentCal.lowReal = 0.0f;
-    currentCal.highRaw = 0.0f;
-    currentCal.highReal = 0.0f;
+    currentCal.lowCaptured = DEFAULT_CURRENT_LOW_CAPTURED;
+    currentCal.highCaptured = DEFAULT_CURRENT_HIGH_CAPTURED;
+    currentCal.lowRaw = DEFAULT_CURRENT_LOW_RAW;
+    currentCal.lowReal = DEFAULT_CURRENT_LOW_REAL;
+    currentCal.highRaw = DEFAULT_CURRENT_HIGH_RAW;
+    currentCal.highReal = DEFAULT_CURRENT_HIGH_REAL;
 }
 
 void saveCalibration() {
@@ -169,21 +169,21 @@ void loadCalibration() {
 
     voltageCal.scale = preferences.getFloat("v_scale", DEFAULT_VOLTAGE_SCALE);
     voltageCal.offset = preferences.getFloat("v_offset", DEFAULT_VOLTAGE_OFFSET);
-    voltageCal.lowCaptured = preferences.getBool("v_low_cap", false);
-    voltageCal.highCaptured = preferences.getBool("v_high_cap", false);
-    voltageCal.lowRaw = preferences.getFloat("v_low_raw", 0.0f);
-    voltageCal.lowReal = preferences.getFloat("v_low_real", 0.0f);
-    voltageCal.highRaw = preferences.getFloat("v_high_raw", 0.0f);
-    voltageCal.highReal = preferences.getFloat("v_high_real", 0.0f);
+    voltageCal.lowCaptured = preferences.getBool("v_low_cap", DEFAULT_VOLTAGE_LOW_CAPTURED);
+    voltageCal.highCaptured = preferences.getBool("v_high_cap", DEFAULT_VOLTAGE_HIGH_CAPTURED);
+    voltageCal.lowRaw = preferences.getFloat("v_low_raw", DEFAULT_VOLTAGE_LOW_RAW);
+    voltageCal.lowReal = preferences.getFloat("v_low_real", DEFAULT_VOLTAGE_LOW_REAL);
+    voltageCal.highRaw = preferences.getFloat("v_high_raw", DEFAULT_VOLTAGE_HIGH_RAW);
+    voltageCal.highReal = preferences.getFloat("v_high_real", DEFAULT_VOLTAGE_HIGH_REAL);
 
     currentCal.scale = preferences.getFloat("i_scale", DEFAULT_CURRENT_SCALE);
     currentCal.offset = preferences.getFloat("i_offset", DEFAULT_CURRENT_OFFSET);
-    currentCal.lowCaptured = preferences.getBool("i_low_cap", false);
-    currentCal.highCaptured = preferences.getBool("i_high_cap", false);
-    currentCal.lowRaw = preferences.getFloat("i_low_raw", 0.0f);
-    currentCal.lowReal = preferences.getFloat("i_low_real", 0.0f);
-    currentCal.highRaw = preferences.getFloat("i_high_raw", 0.0f);
-    currentCal.highReal = preferences.getFloat("i_high_real", 0.0f);
+    currentCal.lowCaptured = preferences.getBool("i_low_cap", DEFAULT_CURRENT_LOW_CAPTURED);
+    currentCal.highCaptured = preferences.getBool("i_high_cap", DEFAULT_CURRENT_HIGH_CAPTURED);
+    currentCal.lowRaw = preferences.getFloat("i_low_raw", DEFAULT_CURRENT_LOW_RAW);
+    currentCal.lowReal = preferences.getFloat("i_low_real", DEFAULT_CURRENT_LOW_REAL);
+    currentCal.highRaw = preferences.getFloat("i_high_raw", DEFAULT_CURRENT_HIGH_RAW);
+    currentCal.highReal = preferences.getFloat("i_high_real", DEFAULT_CURRENT_HIGH_REAL);
 
     preferences.end();
 }
