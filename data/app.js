@@ -426,7 +426,9 @@ window.addEventListener("load", () => {
     });
 
     panes.forEach((pane) => {
-      pane.hidden = pane.dataset.viewPane !== view;
+      const paneView = pane.dataset.viewPane;
+      const shouldShow = paneView === view || (paneView === "overview" && view === "testing");
+      pane.hidden = !shouldShow;
     });
 
     setText(ui.viewTitle, viewTitles[view] || "Live overview");
