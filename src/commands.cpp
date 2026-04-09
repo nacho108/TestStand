@@ -11,6 +11,118 @@
 
 namespace {
 
+struct CommandHelpEntry {
+    const char* command;
+    const char* description;
+};
+
+constexpr CommandHelpEntry kCommandHelpEntries[] = {
+    {"motor start", "start motor at 5%"},
+    {"motor stop", "ramp down to 0% in 3 seconds"},
+    {"motor stop now", "immediate stop"},
+    {"motor set <0-100>", "softly ramp to target (1 s per 30%)"},
+    {"motor ramp", "ramp from current throttle to 100% in 10 seconds"},
+    {"motor test", "full automatic motor test and CSV output"},
+    {"test list", "list saved test CSV files in LittleFS"},
+    {"test get <filename>", "print a saved test CSV file"},
+    {"test remove <filename>", "delete a saved test CSV file"},
+    {"restart", "reboot the ESP32 board"},
+    {"pass", "reboot into ESC passthrough mode"},
+    {"esc params", "read one AM32 ESC parameter with debug output"},
+    {"esc dump", "read and print the full AM32 EEPROM region"},
+    {"esc reverse", "toggle the AM32 dir_reversed parameter"},
+    {"esc poles <value>", "write ESC motor pole count and use it in RPM calculations"},
+    {"esc kv <value>", "write ESC motor KV estimate"},
+    {"X", "emergency ramp-down to 0% with soft ramp"},
+    {"status", "print latest telemetry once"},
+    {"telemetry on", "start periodic telemetry output"},
+    {"telemetry off", "stop periodic telemetry output"},
+    {"scale status", "print NAU7802 status"},
+    {"scale read", "print live 0.5 s moving-average load cell value"},
+    {"scale tare", "tare / zero the load cell with 1 second average"},
+    {"scale calibration <grams>", "calibrate scale using known weight in grams with 1 second average"},
+    {"calibrate current low <A>", ""},
+    {"calibrate current high <A>", ""},
+    {"calibrate voltage low <V>", ""},
+    {"calibrate voltage high <V>", ""},
+    {"calibration show", ""},
+    {"calibration reset", ""},
+    {"ir status", "print MLX90614 status"},
+    {"ir read", "read ambient and object temperatures"},
+    {"wifi select", "scan networks, choose by number, then enter password"},
+    {"wifi connect", "retry connecting to saved Wi-Fi networks"},
+    {"wifi ap", "force Wi-Fi access point mode immediately"},
+    {"wifi forget", "list saved networks and choose one to remove"},
+    {"wifi status", "print current Wi-Fi mode, connection, and saved networks"},
+    {"help", "show all commands"},
+    {"help <text>", "search command help for matching text"}
+};
+
+bool commandHelpMatches(const CommandHelpEntry& entry, const String& filterLower) {
+    if (filterLower.length() == 0) {
+        return true;
+    }
+
+    String command = entry.command;
+    command.toLowerCase();
+    if (command.indexOf(filterLower) >= 0) {
+        return true;
+    }
+
+    String description = entry.description;
+    description.toLowerCase();
+    return description.indexOf(filterLower) >= 0;
+}
+
+void printCommandHelpEntry(const CommandHelpEntry& entry) {
+    Serial.print("  ");
+    Serial.print(entry.command);
+    if (strlen(entry.description) > 0) {
+        Serial.print("                  -> ");
+        Serial.println(entry.description);
+        return;
+    }
+
+    Serial.println();
+}
+
+void printHelpFiltered(const String& filter) {
+    String trimmedFilter = filter;
+    trimmedFilter.trim();
+
+    String filterLower = trimmedFilter;
+    filterLower.toLowerCase();
+
+    if (filterLower.length() == 0) {
+        Serial.println("Commands:");
+    } else {
+        Serial.print("Help matches for \"");
+        Serial.print(trimmedFilter);
+        Serial.println("\":");
+    }
+
+    size_t matchCount = 0;
+    for (const CommandHelpEntry& entry : kCommandHelpEntries) {
+        if (!commandHelpMatches(entry, filterLower)) {
+            continue;
+        }
+
+        printCommandHelpEntry(entry);
+        ++matchCount;
+    }
+
+    if (matchCount == 0) {
+        Serial.println("  No matching commands found.");
+        return;
+    }
+
+    if (filterLower.length() > 0) {
+        Serial.print("Found ");
+        Serial.print(matchCount);
+        Serial.println(" matching command(s).");
+    }
+}
+
 bool parseFilenameArgument(const String& cmd, const char* prefix, String& filename) {
     if (!cmd.startsWith(prefix)) {
         return false;
@@ -87,45 +199,7 @@ void handlePendingTestSaveCommand(const String& cmd) {
 }
 
 void printHelp() {
-    Serial.println("Commands:");
-    Serial.println("  motor start                  -> start motor at 5%");
-    Serial.println("  motor stop                   -> ramp down to 0% in 3 seconds");
-    Serial.println("  motor stop now               -> immediate stop");
-    Serial.println("  motor set <0-100>            -> softly ramp to target (1 s per 30%)");
-    Serial.println("  motor ramp                   -> ramp from current throttle to 100% in 10 seconds");
-    Serial.println("  motor test                   -> full automatic motor test and CSV output");
-    Serial.println("  test list                    -> list saved test CSV files in LittleFS");
-    Serial.println("  test get <filename>          -> print a saved test CSV file");
-    Serial.println("  test remove <filename>       -> delete a saved test CSV file");
-    Serial.println("  restart                      -> reboot the ESP32 board");
-    Serial.println("  pass                         -> reboot into ESC passthrough mode");
-    Serial.println("  esc params                   -> read one AM32 ESC parameter with debug output");
-    Serial.println("  esc dump                     -> read and print the full AM32 EEPROM region");
-    Serial.println("  esc reverse                  -> toggle the AM32 dir_reversed parameter");
-    Serial.println("  esc poles <value>            -> write ESC motor pole count and use it in RPM calculations");
-    Serial.println("  esc kv <value>               -> write ESC motor KV estimate");
-    Serial.println("  X                            -> emergency ramp-down to 0% with soft ramp");
-    Serial.println("  status                       -> print latest telemetry once");
-    Serial.println("  telemetry on                 -> start periodic telemetry output");
-    Serial.println("  telemetry off                -> stop periodic telemetry output");
-    Serial.println("  scale status                 -> print NAU7802 status");
-    Serial.println("  scale read                   -> print live 0.5 s moving-average load cell value");
-    Serial.println("  scale tare                   -> tare / zero the load cell with 1 second average");
-    Serial.println("  scale calibration <grams>    -> calibrate scale using known weight in grams with 1 second average");
-    Serial.println("  calibrate current low <A>");
-    Serial.println("  calibrate current high <A>");
-    Serial.println("  calibrate voltage low <V>");
-    Serial.println("  calibrate voltage high <V>");
-    Serial.println("  calibration show");
-    Serial.println("  calibration reset");
-    Serial.println("  ir status                    -> print MLX90614 status");
-    Serial.println("  ir read                      -> read ambient and object temperatures");
-    Serial.println("  wifi select                  -> scan networks, choose by number, then enter password");
-    Serial.println("  wifi connect                 -> retry connecting to saved Wi-Fi networks");
-    Serial.println("  wifi ap                      -> force Wi-Fi access point mode immediately");
-    Serial.println("  wifi forget                  -> list saved networks and choose one to remove");
-    Serial.println("  wifi status                  -> print current Wi-Fi mode, connection, and saved networks");
-    Serial.println("  help");
+    printHelpFiltered(String());
 }
 
 void handleCommand(String cmd) {
@@ -134,6 +208,9 @@ void handleCommand(String cmd) {
     if (cmd.length() == 0) {
         return;
     }
+
+    String cmdLower = cmd;
+    cmdLower.toLowerCase();
 
     if (cmd.equalsIgnoreCase("wifi ap")) {
         forceAccessPointMode();
@@ -159,6 +236,11 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("help")) {
         printHelp();
+        return;
+    }
+
+    if (cmdLower.startsWith("help ")) {
+        printHelpFiltered(cmd.substring(strlen("help ")));
         return;
     }
 
