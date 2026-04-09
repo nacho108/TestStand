@@ -14,7 +14,7 @@ static constexpr int PWM_FREQ = 50;
 static constexpr int PWM_CHANNEL = 0;
 static constexpr int PWM_RESOLUTION = 16;
 
-static constexpr float DEFAULT_SCALE_CAL_FACTOR = 1.0f;
+static constexpr float DEFAULT_SCALE_CAL_FACTOR = -106.461f;
 static constexpr int32_t DEFAULT_SCALE_ZERO_OFFSET = 0;
 static constexpr unsigned long SCALE_AVG_WINDOW_MS = 500;
 static constexpr unsigned long SCALE_CAL_WINDOW_MS = 1000;
