@@ -100,15 +100,6 @@ void readConsole() {
 
         lastConsoleCharWasCarriageReturn = (c == '\r');
 
-        if (c == 'X' || c == 'x') {
-            inputBuffer = "";
-            promptShown = false;
-            resetHistoryBrowsing();
-            emergencyStopRamp();
-            showPrompt();
-            continue;
-        }
-
         if ((uint8_t)c == 27) {
             unsigned long startWait = millis();
             while (Serial.available() < 2 && (millis() - startWait < 20)) {

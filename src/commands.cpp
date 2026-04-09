@@ -244,6 +244,11 @@ void handleCommand(String cmd) {
         return;
     }
 
+    if (cmd.equalsIgnoreCase("x")) {
+        emergencyStopRamp();
+        return;
+    }
+
     if (cmd.equalsIgnoreCase("motor start")) {
         startMotorAtFivePercent();
         Serial.println("Motor started at 5%");
