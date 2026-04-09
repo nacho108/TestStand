@@ -31,7 +31,8 @@ portMUX_TYPE queuedWebCommandMux = portMUX_INITIALIZER_UNLOCKED;
 String queuedWebCommand;
 bool queuedWebCommandPending = false;
 
-constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 30000;
+constexpr unsigned long WIFI_CONNECT_TIMEOUT_MS = 45000;
+constexpr int WIFI_AP_FALLBACK_RETRY_CYCLES = 3;
 constexpr int MAX_SCANNED_NETWORKS = 10;
 constexpr int MAX_SAVED_WIFI_NETWORKS = 8;
 constexpr const char* WIFI_PREF_NAMESPACE = "am32cli";
@@ -46,6 +47,7 @@ String savedWifiSsids[MAX_SAVED_WIFI_NETWORKS];
 String savedWifiPasswords[MAX_SAVED_WIFI_NETWORKS];
 int savedWifiCount = 0;
 int connectingWifiIndex = -1;
+int stationRetryCycles = 0;
 bool webUiAssetsReady = false;
 constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 500;
 
@@ -67,6 +69,7 @@ void printSocketClientContext(const AsyncWebSocketClient* client) {
 }
 
 void ensureScanCapableWifiMode();
+void handleWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info);
 
 bool checkWebUiAsset(const char* path) {
     if (LittleFS.exists(path)) {
@@ -283,6 +286,8 @@ bool startSavedWifiConnectionByIndex(int index) {
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true, true);
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
+    WiFi.setAutoReconnect(true);
     WiFi.begin(ssid.c_str(), password.c_str());
 
     apModeActive = false;
@@ -334,6 +339,7 @@ bool startAccessPointMode() {
     stationConnectAnnounced = false;
     stationConnectedAnnounced = false;
     connectingWifiIndex = -1;
+    stationRetryCycles = 0;
 
     Serial.print("Wi-Fi AP started. SSID: ");
     Serial.println(WEB_AP_SSID);
@@ -345,6 +351,8 @@ bool startAccessPointMode() {
 }
 
 void startStationMode(const String& ssid, const String& password, bool saveConfig) {
+    stationRetryCycles = 0;
+
     if (saveConfig) {
         saveWifiConfiguration(ssid, password);
     }
@@ -367,6 +375,8 @@ void startStationMode(const String& ssid, const String& password, bool saveConfi
     WiFi.softAPdisconnect(true);
     WiFi.disconnect(true, true);
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(false);
+    WiFi.setAutoReconnect(true);
     WiFi.begin(ssid.c_str(), password.c_str());
 
     apModeActive = false;
@@ -385,6 +395,21 @@ void ensureScanCapableWifiMode() {
         WiFi.mode(WIFI_AP_STA);
     } else if (mode == WIFI_OFF) {
         WiFi.mode(WIFI_STA);
+    }
+}
+
+void handleWifiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
+    if (event == ARDUINO_EVENT_WIFI_STA_DISCONNECTED) {
+        Serial.print("Wi-Fi STA disconnected. reason=");
+        Serial.print((int)info.wifi_sta_disconnected.reason);
+        Serial.print(" ssid=");
+        Serial.println(WiFi.SSID());
+        return;
+    }
+
+    if (event == ARDUINO_EVENT_WIFI_STA_GOT_IP) {
+        Serial.print("Wi-Fi STA got IP: ");
+        Serial.println(WiFi.localIP());
     }
 }
 
@@ -748,6 +773,7 @@ void updateWebServer() {
     if (!apModeActive) {
         if (WiFi.status() == WL_CONNECTED) {
             stationConnectStartMs = 0;
+            stationRetryCycles = 0;
             if (!stationConnectedAnnounced) {
                 printStationConnectedMessage();
                 stationConnectedAnnounced = true;
@@ -770,8 +796,22 @@ void updateWebServer() {
                         startAccessPointMode();
                     }
                 } else {
-                    Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
-                    startAccessPointMode();
+                    ++stationRetryCycles;
+                    if (savedWifiCount > 0 && stationRetryCycles < WIFI_AP_FALLBACK_RETRY_CYCLES) {
+                        Serial.print("Wi-Fi station connect timed out. Retrying saved networks (cycle ");
+                        Serial.print(stationRetryCycles);
+                        Serial.print(" of ");
+                        Serial.print(WIFI_AP_FALLBACK_RETRY_CYCLES);
+                        Serial.println(") before AP fallback.");
+                        if (!startSavedWifiConnectionByIndex(0)) {
+                            Serial.println("No saved Wi-Fi networks are currently visible. Staying in station retry mode.");
+                            stationConnectStartMs = millis();
+                            connectingWifiIndex = -1;
+                        }
+                    } else {
+                        Serial.println("Wi-Fi station connect timed out. Falling back to AP mode.");
+                        startAccessPointMode();
+                    }
                 }
             }
         }
@@ -955,6 +995,7 @@ void reconnectSavedWifi() {
     wifiSelectionPasswordPending = false;
     wifiForgetIndexPending = false;
     pendingWifiSsid = "";
+    stationRetryCycles = 0;
 
     loadWifiConfiguration();
     if (savedWifiCount == 0) {
