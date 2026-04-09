@@ -11,6 +11,7 @@ window.addEventListener("load", () => {
     studyStatus: document.getElementById("study-status"),
     studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
     studySeriesInputs: Array.from(document.querySelectorAll('input[name="study-series"]')),
+    studyThrustSeriesOption: document.getElementById("study-series-thrust")?.closest("label") || null,
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -211,6 +212,14 @@ window.addEventListener("load", () => {
     });
   };
 
+  const syncStudySeriesControls = () => {
+    const thrustOnXAxis = chartContexts.study.xAxisKey === "thrust_grams";
+
+    if (ui.studyThrustSeriesOption) {
+      ui.studyThrustSeriesOption.style.display = thrustOnXAxis ? "none" : "";
+    }
+  };
+
   const buildChartPath = (rows, valueKey, xKey = "throttle_percent") => {
     if (!Array.isArray(rows) || rows.length === 0) {
       return "M0,100 L100,100";
@@ -255,10 +264,11 @@ window.addEventListener("load", () => {
     updateXAxis(context, rows);
     const xAxisKey = context.xAxisKey || "throttle_percent";
     const visibleSeries = context.visibleSeries || {};
+    const hideThrustSeries = xAxisKey === "thrust_grams";
 
     if (context.thrustPath) {
       context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey));
-      context.thrustPath.parentElement.style.display = visibleSeries.thrust === false ? "none" : "";
+      context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerPath) {
@@ -759,6 +769,7 @@ window.addEventListener("load", () => {
 
   setView("overview");
   applyDisconnectedState();
+  syncStudySeriesControls();
   updateChart(chartContexts.testing, []);
   updateChart(chartContexts.study, []);
 
@@ -797,6 +808,7 @@ window.addEventListener("load", () => {
         }
 
         chartContexts.study.xAxisKey = input.value === "thrust_grams" ? "thrust_grams" : "throttle_percent";
+        syncStudySeriesControls();
         updateChart(chartContexts.study, studyRows);
       });
     });
