@@ -715,7 +715,7 @@ window.addEventListener("load", () => {
 
     socket.addEventListener("open", () => {
       stopPolling();
-      applyDisconnectedState();
+      console.info("WebSocket connected");
       setHealth(ui.powerHealth, "WebSocket connected");
     });
 
@@ -745,15 +745,22 @@ window.addEventListener("load", () => {
       }
     });
 
-    socket.addEventListener("close", () => {
+    socket.addEventListener("close", (event) => {
+      const closeCode = typeof event.code === "number" ? event.code : 0;
+      const closeReason = event.reason ? `: ${event.reason}` : "";
+      console.warn(`WebSocket closed (${closeCode})${closeReason}`);
+      socket = null;
       applyDisconnectedState();
+      setHealth(ui.powerHealth, `WebSocket closed (${closeCode})`, "warn");
       startPolling();
       scheduleReconnect();
     });
 
-    socket.addEventListener("error", () => {
+    socket.addEventListener("error", (event) => {
+      console.error("WebSocket error", event);
+      setHealth(ui.powerHealth, "WebSocket error, retrying", "warn");
       startPolling();
-      if (socket) {
+      if (socket && socket.readyState !== WebSocket.CLOSING && socket.readyState !== WebSocket.CLOSED) {
         socket.close();
       }
     });

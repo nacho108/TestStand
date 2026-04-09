@@ -47,6 +47,24 @@ String savedWifiPasswords[MAX_SAVED_WIFI_NETWORKS];
 int savedWifiCount = 0;
 int connectingWifiIndex = -1;
 bool webUiAssetsReady = false;
+constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 500;
+
+void printSocketClientContext(const AsyncWebSocketClient* client) {
+    if (client == nullptr) {
+        return;
+    }
+
+    Serial.print(" id=");
+    Serial.print(client->id());
+    Serial.print(" ip=");
+    Serial.print(client->remoteIP());
+    Serial.print(" heap=");
+    Serial.print(ESP.getFreeHeap());
+    Serial.print(" ws_clients=");
+    Serial.print(telemetrySocket.count());
+    Serial.print(" wifi_status=");
+    Serial.print((int)WiFi.status());
+}
 
 void ensureScanCapableWifiMode();
 
@@ -504,13 +522,17 @@ void handleWebSocketEvent(
     (void)len;
 
     if (type == WS_EVT_CONNECT) {
+        Serial.print("WebSocket client connected:");
+        printSocketClientContext(client);
+        Serial.println();
         client->text(buildStatusJson(false));
         return;
     }
 
     if (type == WS_EVT_DISCONNECT) {
-        Serial.print("WebSocket client disconnected: ");
-        Serial.println(client->id());
+        Serial.print("WebSocket client disconnected:");
+        printSocketClientContext(client);
+        Serial.println();
     }
 }
 
@@ -758,12 +780,14 @@ void updateWebServer() {
     telemetrySocket.cleanupClients();
 
     const unsigned long nowMs = millis();
-    if (nowMs - lastTelemetryBroadcastMs < 250) {
+    if (nowMs - lastTelemetryBroadcastMs < TELEMETRY_BROADCAST_INTERVAL_MS) {
         return;
     }
 
     lastTelemetryBroadcastMs = nowMs;
-    telemetrySocket.textAll(buildStatusJson(false));
+    if (telemetrySocket.count() > 0) {
+        telemetrySocket.textAll(buildStatusJson(false));
+    }
 }
 
 void beginWifiSelection() {
