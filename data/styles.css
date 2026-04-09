@@ -429,7 +429,7 @@ body::before {
 
 .chart-plot {
   position: relative;
-  min-height: 280px;
+  min-height: 560px;
   overflow: hidden;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.88);
@@ -516,7 +516,7 @@ body::before {
   right: 92px;
   bottom: 36px;
   width: calc(100% - 184px);
-  height: 180px;
+  height: 360px;
   fill: none;
   stroke-width: 1.5;
   opacity: 0.96;
@@ -528,7 +528,7 @@ body::before {
   right: 92px;
   bottom: 36px;
   width: calc(100% - 184px);
-  height: 180px;
+  height: 360px;
   pointer-events: none;
 }
 
