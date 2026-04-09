@@ -13,6 +13,9 @@ window.addEventListener("load", () => {
     studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
     studySeriesInputs: Array.from(document.querySelectorAll('input[name="study-series"]')),
     studyThrustSeriesOption: document.getElementById("study-series-thrust")?.closest("label") || null,
+    studyChartPlot: document.querySelector('[data-view-pane="study"] .chart-plot--study'),
+    studyChartGrid: document.querySelector('[data-view-pane="study"] .chart-plot--study .chart-plot__grid'),
+    studyFileVisibilityGroup: document.getElementById("study-file-visibility-group"),
     studyFileVisibilityEmpty: document.getElementById("study-file-visibility-empty"),
     studyFileVisibilityList: document.getElementById("study-file-visibility-list"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
@@ -406,6 +409,24 @@ window.addEventListener("load", () => {
           updateStudyChart();
         });
       });
+
+    syncStudyFilePickerHeight();
+  };
+
+  const syncStudyFilePickerHeight = () => {
+    if (!ui.studyFileVisibilityGroup) {
+      return;
+    }
+
+    const gridHeight = ui.studyChartGrid?.clientHeight || 0;
+    const plotHeight = ui.studyChartPlot?.clientHeight || 0;
+    const maxHeight = gridHeight > 0 ? gridHeight : plotHeight;
+
+    if (maxHeight > 0) {
+      ui.studyFileVisibilityGroup.style.setProperty("--study-file-picker-max-height", `${Math.floor(maxHeight)}px`);
+    } else {
+      ui.studyFileVisibilityGroup.style.removeProperty("--study-file-picker-max-height");
+    }
   };
 
   const updateStudyChart = () => {
@@ -452,6 +473,7 @@ window.addEventListener("load", () => {
     }
 
     renderStudyFileControls();
+    syncStudyFilePickerHeight();
   };
 
   const parseCsvNumber = (value) => {
@@ -625,6 +647,7 @@ window.addEventListener("load", () => {
 
     if (view === "study") {
       refreshSavedTests();
+      requestAnimationFrame(syncStudyFilePickerHeight);
     }
   };
 
@@ -990,6 +1013,7 @@ window.addEventListener("load", () => {
   syncStudySeriesControls();
   updateChart(chartContexts.testing, []);
   updateStudyChart();
+  window.addEventListener("resize", syncStudyFilePickerHeight);
 
   startPolling();
   connectWebSocket();

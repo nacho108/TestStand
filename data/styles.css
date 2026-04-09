@@ -682,7 +682,7 @@ body::before {
   display: grid;
   gap: 8px;
   width: 120px;
-  max-height: 180px;
+  max-height: min(var(--study-file-picker-max-height, 180px), 100%);
   margin: 0;
   padding: 10px 12px;
   overflow: auto;
@@ -815,7 +815,7 @@ body::before {
     top: 8px;
     left: calc(50% + 4px);
     width: calc(50% - 12px);
-    max-height: 104px;
+    max-height: min(var(--study-file-picker-max-height, 104px), 100%);
   }
 
   .chart-axis-picker {
