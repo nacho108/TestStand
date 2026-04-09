@@ -374,6 +374,14 @@ bool runMotorTest() {
         return false;
     }
 
+    if (scaleDetected) {
+        Serial.println("Taring scale before motor test...");
+        if (!tareScale()) {
+            Serial.println("Cannot start test: scale tare failed");
+            return false;
+        }
+    }
+
     testRunning = true;
     motorTestStopRequested = false;
     telemetryStreaming = false;
