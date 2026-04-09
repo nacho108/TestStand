@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=13">
+  <link rel="stylesheet" href="/styles.css?v=14">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -220,7 +220,7 @@
           </label>
           <button class="test-button" id="load-study-button" type="button">Load file</button>
           <button class="test-button test-button--secondary" id="open-study-file-button" type="button">Open CSV from PC</button>
-          <input id="study-local-file-input" type="file" accept=".csv,text/csv" hidden>
+          <input id="study-local-file-input" type="file" accept=".csv,text/csv" multiple hidden>
           <span class="study-toolbar__status" id="study-status">Choose a saved CSV to inspect.</span>
         </div>
 
@@ -253,6 +253,11 @@
                 <input id="study-series-temp" type="checkbox" name="study-series" value="temp" checked>
                 <span>Motor temp</span>
               </label>
+            </fieldset>
+            <fieldset class="chart-file-picker" id="study-file-visibility-group">
+              <legend class="chart-file-picker__title">CSV files</legend>
+              <div class="chart-file-picker__empty" id="study-file-visibility-empty">No CSV loaded</div>
+              <div class="chart-file-picker__list" id="study-file-visibility-list"></div>
             </fieldset>
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
@@ -288,27 +293,19 @@
             <fieldset class="chart-axis-picker">
               <legend class="chart-axis-picker__title">X axis</legend>
               <label class="chart-axis-picker__option" for="study-x-axis-throttle">
-                <input id="study-x-axis-throttle" type="radio" name="study-x-axis" value="throttle_percent" checked>
+                <input id="study-x-axis-throttle" type="radio" name="study-x-axis" value="throttle_percent">
                 <span>Throttle</span>
               </label>
               <label class="chart-axis-picker__option" for="study-x-axis-thrust">
-                <input id="study-x-axis-thrust" type="radio" name="study-x-axis" value="thrust_grams">
+                <input id="study-x-axis-thrust" type="radio" name="study-x-axis" value="thrust_grams" checked>
                 <span>Thrust</span>
               </label>
             </fieldset>
-            <span class="chart-plot__xlabel">Throttle %</span>
-            <svg class="chart-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path id="study-chart-thrust-path" d="M0,100 L100,100"></path>
-            </svg>
-            <svg class="chart-line chart-line--power" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path id="study-chart-power-path" d="M0,100 L100,100"></path>
-            </svg>
-            <svg class="chart-line chart-line--rpm" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path id="study-chart-rpm-path" d="M0,100 L100,100"></path>
-            </svg>
-            <svg class="chart-line chart-line--temp" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <path id="study-chart-temp-path" d="M0,100 L100,100"></path>
-            </svg>
+            <span class="chart-plot__xlabel">Thrust</span>
+            <div class="chart-line-layer chart-line-layer--thrust" id="study-chart-thrust-layer"></div>
+            <div class="chart-line-layer chart-line-layer--power" id="study-chart-power-layer"></div>
+            <div class="chart-line-layer chart-line-layer--rpm" id="study-chart-rpm-layer"></div>
+            <div class="chart-line-layer chart-line-layer--temp" id="study-chart-temp-layer"></div>
             <div class="chart-ticks">
               <span id="study-chart-tick-0">0</span>
               <span id="study-chart-tick-1">25</span>
@@ -322,6 +319,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=14"></script>
+  <script src="/app.js?v=15"></script>
 </body>
 </html>

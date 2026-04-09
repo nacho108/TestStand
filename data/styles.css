@@ -436,31 +436,32 @@ body::before {
 }
 
 .chart-plot--study .chart-plot__grid {
-  inset: 18px 204px 36px 204px;
+  inset: 18px 204px 36px 332px;
 }
 
 .chart-plot--study .chart-plot__axis--y {
-  left: 204px;
+  left: 332px;
 }
 
 .chart-plot--study .chart-plot__axis--x {
-  left: 204px;
+  left: 332px;
   right: 204px;
 }
 
-.chart-plot--study .chart-line {
-  left: 204px;
+.chart-plot--study .chart-line,
+.chart-plot--study .chart-line-layer {
+  left: 332px;
   right: 204px;
-  width: calc(100% - 408px);
+  width: calc(100% - 536px);
 }
 
 .chart-plot--study .chart-ticks {
-  left: 204px;
+  left: 332px;
   right: 204px;
 }
 
 .chart-plot--study .chart-scale--left {
-  left: 120px;
+  left: 248px;
 }
 
 .chart-plot--study .chart-scale--right {
@@ -521,7 +522,33 @@ body::before {
   opacity: 0.96;
 }
 
+.chart-line-layer {
+  position: absolute;
+  left: 92px;
+  right: 92px;
+  bottom: 36px;
+  width: calc(100% - 184px);
+  height: 180px;
+  pointer-events: none;
+}
+
+.chart-line-layer svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke-width: 1.5;
+  opacity: 0.92;
+}
+
 .chart-line path {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line-layer path {
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -656,6 +683,72 @@ body::before {
   margin: 0;
 }
 
+.chart-file-picker {
+  position: absolute;
+  top: 18px;
+  left: 120px;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+  width: 120px;
+  max-height: 180px;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid rgba(32, 74, 112, 0.12);
+  border-radius: 4px;
+  background: rgba(237, 243, 251, 0.96);
+}
+
+.chart-file-picker__title {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-file-picker__empty {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.chart-file-picker__list {
+  display: grid;
+  gap: 8px;
+}
+
+.chart-file-picker__option {
+  display: flex;
+  align-items: start;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chart-file-picker__option input {
+  margin: 2px 0 0;
+}
+
+.chart-file-picker__name {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.chart-file-picker__meta {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 1180px) {
   .group-grid {
     grid-template-columns: 1fr;
@@ -682,11 +775,12 @@ body::before {
   }
 
   .chart-plot--study .chart-plot__grid {
-    inset: 112px 92px 120px 92px;
+    inset: 188px 92px 120px 92px;
   }
 
   .chart-plot--study .chart-plot__axis--y {
     left: 92px;
+    top: 188px;
     bottom: 120px;
   }
 
@@ -695,7 +789,8 @@ body::before {
     bottom: 120px;
   }
 
-  .chart-plot--study .chart-line {
+  .chart-plot--study .chart-line,
+  .chart-plot--study .chart-line-layer {
     left: 92px;
     right: 92px;
     bottom: 120px;
@@ -709,7 +804,7 @@ body::before {
   }
 
   .chart-plot--study .chart-scale {
-    top: 112px;
+    top: 188px;
     bottom: 120px;
   }
 
@@ -724,8 +819,15 @@ body::before {
   .chart-series-picker {
     top: 8px;
     left: 8px;
-    width: calc(100% - 16px);
+    width: calc(50% - 12px);
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .chart-file-picker {
+    top: 8px;
+    left: calc(50% + 4px);
+    width: calc(50% - 12px);
+    max-height: 104px;
   }
 
   .chart-axis-picker {

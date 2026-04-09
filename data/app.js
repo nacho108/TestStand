@@ -12,6 +12,8 @@ window.addEventListener("load", () => {
     studyXAxisInputs: Array.from(document.querySelectorAll('input[name="study-x-axis"]')),
     studySeriesInputs: Array.from(document.querySelectorAll('input[name="study-series"]')),
     studyThrustSeriesOption: document.getElementById("study-series-thrust")?.closest("label") || null,
+    studyFileVisibilityEmpty: document.getElementById("study-file-visibility-empty"),
+    studyFileVisibilityList: document.getElementById("study-file-visibility-list"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -55,10 +57,10 @@ window.addEventListener("load", () => {
       rightBottomTemp: document.getElementById("testing-chart-right-bottom-temp")
     },
     study: {
-      thrustPath: document.getElementById("study-chart-thrust-path"),
-      powerPath: document.getElementById("study-chart-power-path"),
-      rpmPath: document.getElementById("study-chart-rpm-path"),
-      tempPath: document.getElementById("study-chart-temp-path"),
+      thrustLayer: document.getElementById("study-chart-thrust-layer"),
+      powerLayer: document.getElementById("study-chart-power-layer"),
+      rpmLayer: document.getElementById("study-chart-rpm-layer"),
+      tempLayer: document.getElementById("study-chart-temp-layer"),
       leftTopPower: document.getElementById("study-chart-left-top-power"),
       leftMidPower: document.getElementById("study-chart-left-mid-power"),
       leftBottomPower: document.getElementById("study-chart-left-bottom-power"),
@@ -79,7 +81,7 @@ window.addEventListener("load", () => {
         document.getElementById("study-chart-tick-3"),
         document.getElementById("study-chart-tick-4")
       ],
-      xAxisKey: "throttle_percent",
+      xAxisKey: "thrust_grams",
       visibleSeries: {
         thrust: true,
         power: true,
@@ -105,7 +107,7 @@ window.addEventListener("load", () => {
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
   let savedTestFiles = [];
-  let studyRows = [];
+  let studyDatasets = [];
 
   const setText = (element, value) => {
     if (element) {
@@ -181,6 +183,24 @@ window.addEventListener("load", () => {
     }, 0);
   };
 
+  const flattenStudyRows = (datasets, visibleOnly = false) => {
+    if (!Array.isArray(datasets) || datasets.length === 0) {
+      return [];
+    }
+
+    return datasets.flatMap((dataset) => {
+      if (!dataset || !Array.isArray(dataset.rows)) {
+        return [];
+      }
+
+      if (visibleOnly && dataset.visible === false) {
+        return [];
+      }
+
+      return dataset.rows;
+    });
+  };
+
   const updateChartScales = (context, rows) => {
     const maxPower = getSeriesMax(rows, "power_w");
     const maxRpm = getSeriesMax(rows, "rpm");
@@ -219,6 +239,15 @@ window.addEventListener("load", () => {
       ui.studyThrustSeriesOption.style.display = thrustOnXAxis ? "none" : "";
     }
   };
+
+  const buildStudyDatasetId = (source, name) => `${source}:${name}`;
+
+  const escapeHtml = (text) => String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll("\"", "&quot;")
+    .replaceAll("'", "&#39;");
 
   const buildChartPath = (rows, valueKey, xKey = "throttle_percent") => {
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -287,6 +316,88 @@ window.addEventListener("load", () => {
     }
   };
 
+  const buildStudyLayerMarkup = (datasets, valueKey, xKey, className) => datasets
+    .map((dataset) => {
+      const hidden = dataset.visible === false ? " style=\"display:none\"" : "";
+      return `<svg class="chart-line ${className}" viewBox="0 0 100 100" preserveAspectRatio="none" data-study-dataset-id="${escapeHtml(dataset.id)}"${hidden}><path d="${escapeHtml(buildChartPath(dataset.rows, valueKey, xKey))}"></path></svg>`;
+    })
+    .join("");
+
+  const renderStudyFileControls = () => {
+    if (!ui.studyFileVisibilityList || !ui.studyFileVisibilityEmpty) {
+      return;
+    }
+
+    if (studyDatasets.length === 0) {
+      ui.studyFileVisibilityList.innerHTML = "";
+      ui.studyFileVisibilityEmpty.hidden = false;
+      return;
+    }
+
+    ui.studyFileVisibilityEmpty.hidden = true;
+    ui.studyFileVisibilityList.innerHTML = studyDatasets
+      .map((dataset) => {
+        const sourceLabel = dataset.source === "saved" ? "memory" : "PC";
+        return `
+          <label class="chart-file-picker__option" for="study-dataset-${escapeHtml(dataset.id)}">
+            <input id="study-dataset-${escapeHtml(dataset.id)}" type="checkbox" name="study-dataset-visibility" value="${escapeHtml(dataset.id)}"${dataset.visible === false ? "" : " checked"}>
+            <span>
+              <span class="chart-file-picker__name">${escapeHtml(dataset.name)}</span>
+              <span class="chart-file-picker__meta">${escapeHtml(sourceLabel)} | ${dataset.rows.length} pts</span>
+            </span>
+          </label>
+        `;
+      })
+      .join("");
+
+    ui.studyFileVisibilityList
+      .querySelectorAll('input[name="study-dataset-visibility"]')
+      .forEach((input) => {
+        input.addEventListener("change", () => {
+          const dataset = studyDatasets.find((item) => item.id === input.value);
+          if (!dataset) {
+            return;
+          }
+
+          dataset.visible = input.checked;
+          updateStudyChart();
+        });
+      });
+  };
+
+  const updateStudyChart = () => {
+    const context = chartContexts.study;
+    const rows = flattenStudyRows(studyDatasets, true);
+    updateChartScales(context, rows);
+    updateXAxis(context, rows);
+
+    const xAxisKey = context.xAxisKey || "throttle_percent";
+    const visibleSeries = context.visibleSeries || {};
+    const hideThrustSeries = xAxisKey === "thrust_grams";
+
+    if (context.thrustLayer) {
+      context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_grams", xAxisKey, "chart-line--thrust");
+      context.thrustLayer.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
+    }
+
+    if (context.powerLayer) {
+      context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "power_w", xAxisKey, "chart-line--power");
+      context.powerLayer.style.display = visibleSeries.power === false ? "none" : "";
+    }
+
+    if (context.rpmLayer) {
+      context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "rpm", xAxisKey, "chart-line--rpm");
+      context.rpmLayer.style.display = visibleSeries.rpm === false ? "none" : "";
+    }
+
+    if (context.tempLayer) {
+      context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "motor_temperature_c", xAxisKey, "chart-line--temp");
+      context.tempLayer.style.display = visibleSeries.temp === false ? "none" : "";
+    }
+
+    renderStudyFileControls();
+  };
+
   const parseCsvNumber = (value) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
@@ -322,6 +433,31 @@ window.addEventListener("load", () => {
 
   const setStudyStatus = (text) => {
     setText(ui.studyStatus, text);
+  };
+
+  const upsertStudyDataset = (dataset) => {
+    const existingIndex = studyDatasets.findIndex((item) => item.id === dataset.id);
+    if (existingIndex >= 0) {
+      const previous = studyDatasets[existingIndex];
+      studyDatasets[existingIndex] = {
+        ...previous,
+        ...dataset,
+        visible: dataset.visible ?? previous.visible ?? true
+      };
+      return;
+    }
+
+    studyDatasets = [...studyDatasets, { ...dataset, visible: dataset.visible ?? true }];
+  };
+
+  const buildStudyLoadedSummary = () => {
+    if (studyDatasets.length === 0) {
+      return "No CSV loaded.";
+    }
+
+    const visibleCount = studyDatasets.filter((dataset) => dataset.visible !== false).length;
+    const totalPoints = studyDatasets.reduce((sum, dataset) => sum + dataset.rows.length, 0);
+    return `${studyDatasets.length} CSV loaded, ${visibleCount} visible, ${totalPoints} total points.`;
   };
 
   const setMotorTestButtonState = (label, disabled = false) => {
@@ -375,8 +511,6 @@ window.addEventListener("load", () => {
       if (ui.loadStudyButton) {
         ui.loadStudyButton.disabled = true;
       }
-      studyRows = [];
-      updateChart(chartContexts.study, studyRows);
       return;
     }
 
@@ -411,7 +545,7 @@ window.addEventListener("load", () => {
       if (savedTestFiles.length === 0) {
         setStudyStatus("No saved CSV files found in storage.");
       } else {
-        setStudyStatus("Choose a saved CSV and load it into the chart.");
+        setStudyStatus(studyDatasets.length > 0 ? buildStudyLoadedSummary() : "Choose a saved CSV and load it into the chart.");
       }
     } catch (error) {
       savedTestFiles = [];
@@ -650,12 +784,16 @@ window.addEventListener("load", () => {
 
       const csv = await response.text();
       const rows = parseSavedTestCsv(csv);
-      studyRows = rows;
-      updateChart(chartContexts.study, studyRows);
-      setStudyStatus(`Loaded ${filename} with ${rows.length} points.`);
+      upsertStudyDataset({
+        id: buildStudyDatasetId("saved", filename),
+        name: filename,
+        rows,
+        source: "saved",
+        visible: true
+      });
+      updateStudyChart();
+      setStudyStatus(`Loaded ${filename}. ${buildStudyLoadedSummary()}`);
     } catch (error) {
-      studyRows = [];
-      updateChart(chartContexts.study, studyRows);
       setStudyStatus(`Could not load ${filename}.`);
     } finally {
       ui.loadStudyButton.disabled = ui.studyFileSelect.disabled;
@@ -672,23 +810,30 @@ window.addEventListener("load", () => {
   };
 
   const loadStudyFileFromPc = async (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
       return;
     }
 
-    setStudyStatus(`Loading ${file.name} from PC...`);
+    setStudyStatus(`Loading ${files.length} CSV file${files.length === 1 ? "" : "s"} from PC...`);
 
     try {
-      const csv = await file.text();
-      const rows = parseSavedTestCsv(csv);
-      studyRows = rows;
-      updateChart(chartContexts.study, studyRows);
-      setStudyStatus(`Loaded ${file.name} from PC with ${rows.length} points.`);
+      for (const file of files) {
+        const csv = await file.text();
+        const rows = parseSavedTestCsv(csv);
+        upsertStudyDataset({
+          id: buildStudyDatasetId("local", file.name),
+          name: file.name,
+          rows,
+          source: "local",
+          visible: true
+        });
+      }
+
+      updateStudyChart();
+      setStudyStatus(`Loaded ${files.length} file${files.length === 1 ? "" : "s"} from PC. ${buildStudyLoadedSummary()}`);
     } catch (error) {
-      studyRows = [];
-      updateChart(chartContexts.study, studyRows);
-      setStudyStatus(`Could not load ${file.name} from PC.`);
+      setStudyStatus("Could not load CSV file(s) from PC.");
     } finally {
       event.target.value = "";
     }
@@ -780,7 +925,7 @@ window.addEventListener("load", () => {
   applyDisconnectedState();
   syncStudySeriesControls();
   updateChart(chartContexts.testing, []);
-  updateChart(chartContexts.study, []);
+  updateStudyChart();
 
   startPolling();
   connectWebSocket();
@@ -818,7 +963,7 @@ window.addEventListener("load", () => {
 
         chartContexts.study.xAxisKey = input.value === "thrust_grams" ? "thrust_grams" : "throttle_percent";
         syncStudySeriesControls();
-        updateChart(chartContexts.study, studyRows);
+        updateStudyChart();
       });
     });
   }
@@ -827,8 +972,10 @@ window.addEventListener("load", () => {
     ui.studySeriesInputs.forEach((input) => {
       input.addEventListener("change", () => {
         chartContexts.study.visibleSeries[input.value] = input.checked;
-        updateChart(chartContexts.study, studyRows);
+        updateStudyChart();
       });
     });
   }
 });
+
+
