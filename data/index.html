@@ -153,6 +153,7 @@
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
             <span class="legend-power">Watts</span>
+            <span class="legend-current">Current</span>
             <span class="legend-rpm">RPM</span>
             <span class="legend-temp">Motor temp</span>
           </div>
@@ -177,14 +178,17 @@
             <div class="chart-scale chart-scale--right">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-top-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-top-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-mid-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-mid-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-bottom-current">0 A</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-bottom-temp">0 C</span>
               </div>
             </div>
@@ -197,6 +201,11 @@
             <div class="chart-line-layer">
               <svg class="chart-study-line chart-line--power" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path id="testing-chart-power-path" d="M0,96 C12,92 24,85 40,74 S72,48 100,28"></path>
+              </svg>
+            </div>
+            <div class="chart-line-layer">
+              <svg class="chart-study-line chart-line--current" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path id="testing-chart-current-path" d="M0,95 C14,91 28,84 42,72 S74,46 100,24"></path>
               </svg>
             </div>
             <div class="chart-line-layer">
@@ -240,6 +249,7 @@
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
             <span class="legend-power">Watts</span>
+            <span class="legend-current">Current</span>
             <span class="legend-rpm">RPM</span>
             <span class="legend-temp">Motor temp</span>
           </div>
@@ -253,6 +263,10 @@
               <label class="chart-series-picker__option" for="study-series-power">
                 <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
                 <span>Watts</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-current">
+                <input id="study-series-current" type="checkbox" name="study-series" value="current" checked>
+                <span>Current</span>
               </label>
               <label class="chart-series-picker__option" for="study-series-rpm">
                 <input id="study-series-rpm" type="checkbox" name="study-series" value="rpm" checked>
@@ -288,14 +302,17 @@
             <div class="chart-scale chart-scale--right">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-top-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-top-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-mid-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-mid-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-bottom-current">0 A</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-bottom-temp">0 C</span>
               </div>
             </div>
@@ -313,6 +330,7 @@
             <span class="chart-plot__xlabel">Thrust</span>
             <div class="chart-line-layer chart-line-layer--thrust" id="study-chart-thrust-layer"></div>
             <div class="chart-line-layer chart-line-layer--power" id="study-chart-power-layer"></div>
+            <div class="chart-line-layer chart-line-layer--current" id="study-chart-current-layer"></div>
             <div class="chart-line-layer chart-line-layer--rpm" id="study-chart-rpm-layer"></div>
             <div class="chart-line-layer chart-line-layer--temp" id="study-chart-temp-layer"></div>
             <div class="chart-ticks">

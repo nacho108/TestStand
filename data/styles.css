@@ -424,6 +424,7 @@ body::before {
 
 .legend-thrust::before { background: #244d74; }
 .legend-power::before { background: #546fe5; }
+.legend-current::before { background: #1aa36f; }
 .legend-rpm::before { background: #2ea9b8; }
 .legend-temp::before { background: #ff7c5c; }
 
@@ -547,6 +548,7 @@ body::before {
 
 .chart-line--thrust { stroke: #244d74; }
 .chart-line--power { stroke: #546fe5; }
+.chart-line--current { stroke: #1aa36f; }
 .chart-line--rpm { stroke: #2ea9b8; }
 .chart-line--temp { stroke: #ff7c5c; }
 
@@ -597,6 +599,7 @@ body::before {
 
 .chart-scale__value--thrust { color: #244d74; }
 .chart-scale__value--power { color: #546fe5; }
+.chart-scale__value--current { color: #1aa36f; }
 .chart-scale__value--rpm { color: #2ea9b8; }
 .chart-scale__value--temp { color: #ff7c5c; }
 

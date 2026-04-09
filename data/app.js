@@ -45,6 +45,7 @@ window.addEventListener("load", () => {
     testing: {
       thrustPath: document.getElementById("testing-chart-thrust-path"),
       powerPath: document.getElementById("testing-chart-power-path"),
+      currentPath: document.getElementById("testing-chart-current-path"),
       rpmPath: document.getElementById("testing-chart-rpm-path"),
       tempPath: document.getElementById("testing-chart-temp-path"),
       leftTopPower: document.getElementById("testing-chart-left-top-power"),
@@ -56,6 +57,9 @@ window.addEventListener("load", () => {
       rightTopThrust: document.getElementById("testing-chart-right-top-thrust"),
       rightMidThrust: document.getElementById("testing-chart-right-mid-thrust"),
       rightBottomThrust: document.getElementById("testing-chart-right-bottom-thrust"),
+      rightTopCurrent: document.getElementById("testing-chart-right-top-current"),
+      rightMidCurrent: document.getElementById("testing-chart-right-mid-current"),
+      rightBottomCurrent: document.getElementById("testing-chart-right-bottom-current"),
       rightTopTemp: document.getElementById("testing-chart-right-top-temp"),
       rightMidTemp: document.getElementById("testing-chart-right-mid-temp"),
       rightBottomTemp: document.getElementById("testing-chart-right-bottom-temp")
@@ -63,6 +67,7 @@ window.addEventListener("load", () => {
     study: {
       thrustLayer: document.getElementById("study-chart-thrust-layer"),
       powerLayer: document.getElementById("study-chart-power-layer"),
+      currentLayer: document.getElementById("study-chart-current-layer"),
       rpmLayer: document.getElementById("study-chart-rpm-layer"),
       tempLayer: document.getElementById("study-chart-temp-layer"),
       leftTopPower: document.getElementById("study-chart-left-top-power"),
@@ -74,6 +79,9 @@ window.addEventListener("load", () => {
       rightTopThrust: document.getElementById("study-chart-right-top-thrust"),
       rightMidThrust: document.getElementById("study-chart-right-mid-thrust"),
       rightBottomThrust: document.getElementById("study-chart-right-bottom-thrust"),
+      rightTopCurrent: document.getElementById("study-chart-right-top-current"),
+      rightMidCurrent: document.getElementById("study-chart-right-mid-current"),
+      rightBottomCurrent: document.getElementById("study-chart-right-bottom-current"),
       rightTopTemp: document.getElementById("study-chart-right-top-temp"),
       rightMidTemp: document.getElementById("study-chart-right-mid-temp"),
       rightBottomTemp: document.getElementById("study-chart-right-bottom-temp"),
@@ -89,6 +97,7 @@ window.addEventListener("load", () => {
       visibleSeries: {
         thrust: true,
         power: true,
+        current: true,
         rpm: true,
         temp: true
       }
@@ -214,12 +223,14 @@ window.addEventListener("load", () => {
     const maxPower = getSeriesMax(rows, "power_w");
     const maxRpm = getSeriesMax(rows, "rpm");
     const maxThrust = getSeriesMax(rows, "thrust_grams");
+    const maxCurrent = getSeriesMax(rows, "current_a");
     const maxTemp = getSeriesMax(rows, "motor_temperature_c");
     const hideThrustScale = context.xAxisKey === "thrust_grams";
 
     setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, maxPower, "W", 0);
     setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, maxRpm, "rpm", 0);
     setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, maxThrust, "g", 0);
+    setScaleLabels(context.rightTopCurrent, context.rightMidCurrent, context.rightBottomCurrent, maxCurrent, "A", 2);
     setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, maxTemp, "C", 1);
 
     [context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust].forEach((element) => {
@@ -324,6 +335,7 @@ window.addEventListener("load", () => {
       : 100,
     thrust: getAxisMax(rows, "thrust_grams", 1),
     power: getAxisMax(rows, "power_w", 1),
+    current: getAxisMax(rows, "current_a", 1),
     rpm: getAxisMax(rows, "rpm", 1),
     temp: getAxisMax(rows, "motor_temperature_c", 1)
   });
@@ -350,6 +362,14 @@ window.addEventListener("load", () => {
         y: axisBounds.power
       }));
       context.powerPath.parentElement.style.display = visibleSeries.power === false ? "none" : "";
+    }
+
+    if (context.currentPath) {
+      context.currentPath.setAttribute("d", buildChartPath(rows, "current_a", xAxisKey, {
+        x: axisBounds.x,
+        y: axisBounds.current
+      }));
+      context.currentPath.parentElement.style.display = visibleSeries.current === false ? "none" : "";
     }
 
     if (context.rpmPath) {
@@ -461,6 +481,14 @@ window.addEventListener("load", () => {
         y: axisBounds.power
       });
       context.powerLayer.style.display = visibleSeries.power === false ? "none" : "";
+    }
+
+    if (context.currentLayer) {
+      context.currentLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "current_a", xAxisKey, "chart-line--current", {
+        x: axisBounds.x,
+        y: axisBounds.current
+      });
+      context.currentLayer.style.display = visibleSeries.current === false ? "none" : "";
     }
 
     if (context.rpmLayer) {
