@@ -457,8 +457,32 @@ void printScaleReading() {
 
 bool tareScale() {
     if (simulationEnabled()) {
-        Serial.println("Scale tare is not available in simulation mode");
-        return false;
+        Serial.println("Taring simulated scale (1 second average)...");
+
+        int32_t avgRaw = 0;
+        float avgWeight = 0.0f;
+        float stddev = 0.0f;
+        uint32_t samples = 0;
+
+        if (!acquireAveragedScaleSample(SCALE_TARE_WINDOW_MS, avgRaw, avgWeight, stddev, samples)) {
+            Serial.println("Failed to read simulated scale for tare");
+            return false;
+        }
+
+        tareSimulationScale(avgWeight);
+        clearScaleWindow();
+
+        Serial.print("Simulated scale tared using ");
+        Serial.print(samples);
+        Serial.print(" samples");
+        Serial.print("  stddev=");
+        Serial.print(stddev, 3);
+        Serial.println(" g");
+
+        Serial.print("New simulated zero offset = ");
+        Serial.print(avgWeight, 3);
+        Serial.println(" g");
+        return true;
     }
 
     if (!scaleDetected) {

@@ -14,6 +14,8 @@ constexpr float RPM_NOISE = 5.0f;
 constexpr float VOLTAGE_NOISE_VOLTS = 0.1f;
 constexpr float CURRENT_NOISE_AMPS = 0.2f;
 
+float simulatedScaleTareOffsetGrams = 0.0f;
+
 float evaluateCubic(float a, float b, float c, float d, float x) {
     return ((a * x + b) * x + c) * x + d;
 }
@@ -102,10 +104,11 @@ void writeSimulationToSharedState(const SimulatedSensorValues& values, unsigned 
     lastIrObjectC = values.motorTemperatureC;
     lastIrReadMs = nowMs;
 
+    const float taredThrustGrams = values.thrustGrams - simulatedScaleTareOffsetGrams;
     scaleDetected = true;
     lastScaleReadMs = nowMs;
-    lastScaleRaw = (int32_t)lroundf(values.thrustGrams);
-    lastScaleWeight = values.thrustGrams;
+    lastScaleRaw = (int32_t)lroundf(taredThrustGrams);
+    lastScaleWeight = taredThrustGrams;
     lastScaleStdDev = SENSOR_SIMULATION_SCALE_STDDEV_G;
     lastScaleWindowSampleCount = 1;
     lastScaleSampleValid = true;
@@ -123,6 +126,7 @@ void beginSimulation() {
     }
 
     randomSeed(micros());
+    simulatedScaleTareOffsetGrams = 0.0f;
     updateSimulation();
 }
 
@@ -144,6 +148,11 @@ void updateSimulation() {
     const float throttle = constrain(throttlePercent, 0.0f, 100.0f);
     fillSimulatedValues(throttle, values);
     writeSimulationToSharedState(values, nowMs);
+}
+
+void tareSimulationScale(float tareOffsetGrams) {
+    simulatedScaleTareOffsetGrams = tareOffsetGrams;
+    updateSimulation();
 }
 
 const SimulatedSensorValues& getSimulatedSensorValues() {
