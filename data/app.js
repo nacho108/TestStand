@@ -394,6 +394,15 @@ window.addEventListener("load", () => {
     element.value = value;
   };
 
+  const setFixedInputValueIfIdle = (element, value, digits) => {
+    if (!element || document.activeElement === element) {
+      return;
+    }
+
+    const numericValue = Number(value);
+    element.value = Number.isFinite(numericValue) ? numericValue.toFixed(digits) : "";
+  };
+
   const setThresholdInputValueIfIdle = (element, value, digits) => {
     if (!element || document.activeElement === element) {
       return;
@@ -1176,18 +1185,18 @@ window.addEventListener("load", () => {
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
-    setInputValueIfIdle(ui.configEscPolesValue, `${Number(data.motor_poles) || 0}`);
+    setFixedInputValueIfIdle(ui.configEscPolesValue, Number(data.motor_poles) || 0, 0);
     if (ui.configScaleFactorValue) {
       ui.configScaleFactorValue.value = Number.isFinite(Number(data.scale_calibration_factor))
         ? Number(data.scale_calibration_factor).toFixed(6)
         : "--";
     }
-    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiValue, data.safety_current_hi_a, 3);
-    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiHiValue, data.safety_current_hihi_a, 3);
-    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiValue, data.safety_motor_temp_hi_c, 1);
-    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiHiValue, data.safety_motor_temp_hihi_c, 1);
-    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 1);
-    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 1);
+    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiValue, data.safety_current_hi_a, 0);
+    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiHiValue, data.safety_current_hihi_a, 0);
+    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiValue, data.safety_motor_temp_hi_c, 0);
+    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiHiValue, data.safety_motor_temp_hihi_c, 0);
+    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 0);
+    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 0);
     updateChart(chartContexts.testing, cachedTestResults);
     updateTestingEfficiencySummary(cachedTestResults, Boolean(data.test_running));
 
@@ -1502,12 +1511,12 @@ window.addEventListener("load", () => {
     await sendConfigurationCommand(`${prefix}${normalizedValue}`);
   };
 
-  const runSafetyCurrentHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiValue, "set current hi ", 3);
-  const runSafetyCurrentHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiHiValue, "set current hihi ", 3);
-  const runSafetyMotorTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiValue, "set motor temp hi ", 1);
-  const runSafetyMotorTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiHiValue, "set motor temp hihi ", 1);
-  const runSafetyEscTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiValue, "set esc temp hi ", 1);
-  const runSafetyEscTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiHiValue, "set esc temp hihi ", 1);
+  const runSafetyCurrentHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiValue, "set current hi ", 0);
+  const runSafetyCurrentHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiHiValue, "set current hihi ", 0);
+  const runSafetyMotorTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiValue, "set motor temp hi ", 0);
+  const runSafetyMotorTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiHiValue, "set motor temp hihi ", 0);
+  const runSafetyEscTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiValue, "set esc temp hi ", 0);
+  const runSafetyEscTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiHiValue, "set esc temp hihi ", 0);
 
   const runMotorTest = async () => {
     if (!ui.startMotorTestButton || motorTestPending) {
