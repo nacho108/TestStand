@@ -15,7 +15,9 @@
 namespace {
 
 constexpr const char* kTestStorageDir = "/tests";
+constexpr const char* kTestCooldownPrefKey = "test_cool";
 bool motorTestStopRequested = false;
+bool motorTestSettingsLoaded = false;
 
 void serviceTestLoop() {
     processQueuedWebCommand();
@@ -107,6 +109,59 @@ bool shouldAbortMotorTest() {
 
     Serial.println("Motor test stop requested from web UI.");
     emergencyStopRamp();
+    return true;
+}
+
+void loadMotorTestSettings() {
+    if (motorTestSettingsLoaded) {
+        return;
+    }
+
+    preferences.begin("am32cli", true);
+    motorTestCooldownEnabled = preferences.getBool(
+        kTestCooldownPrefKey,
+        DEFAULT_MOTOR_TEST_COOLDOWN_ENABLED
+    );
+    preferences.end();
+    motorTestSettingsLoaded = true;
+}
+
+void persistMotorTestSettings() {
+    preferences.begin("am32cli", false);
+    preferences.putBool(kTestCooldownPrefKey, motorTestCooldownEnabled);
+    preferences.end();
+    motorTestSettingsLoaded = true;
+}
+
+bool runMotorTestCooldownPhase() {
+    unsigned long rampDurationMs = calculateThrottleRampDurationMs(
+        throttlePercent,
+        MOTOR_TEST_COOLDOWN_THROTTLE_PERCENT
+    );
+
+    Serial.print("Cooldown: ramping to ");
+    Serial.print(MOTOR_TEST_COOLDOWN_THROTTLE_PERCENT, 0);
+    Serial.print("%");
+    if (rampDurationMs > 0) {
+        Serial.print(" in ");
+        Serial.print(rampDurationMs);
+        Serial.print(" ms");
+    }
+    Serial.print(", then holding for ");
+    Serial.print(MOTOR_TEST_COOLDOWN_HOLD_MS / 1000);
+    Serial.println(" seconds");
+
+    authorizeMotorOutput();
+    startRamp(MOTOR_TEST_COOLDOWN_THROTTLE_PERCENT, rampDurationMs);
+
+    if (rampDurationMs > 0 && !updateTelemetryDuringBlockingWait(rampDurationMs)) {
+        return false;
+    }
+
+    if (!updateTelemetryDuringBlockingWait(MOTOR_TEST_COOLDOWN_HOLD_MS)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -369,6 +424,8 @@ bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
 }
 
 bool runMotorTest() {
+    loadMotorTestSettings();
+
     if (!lastTlm.valid) {
         Serial.println("Cannot start test: no valid telemetry yet");
         return false;
@@ -529,6 +586,14 @@ bool runMotorTest() {
         Serial.println(" filtered scale reads");
     }
 
+    if (motorTestCooldownEnabled) {
+        if (!runMotorTestCooldownPhase()) {
+            testRunning = false;
+            Serial.println("Motor test aborted during cooldown");
+            return false;
+        }
+    }
+
     stopMotorSlow();
     testRunning = false;
 
@@ -538,6 +603,17 @@ bool runMotorTest() {
     testFilenamePromptPending = false;
     Serial.println("Would you like to save the test? Type YES to save or NO to skip.");
     return true;
+}
+
+bool isMotorTestCooldownEnabled() {
+    loadMotorTestSettings();
+    return motorTestCooldownEnabled;
+}
+
+void setMotorTestCooldownEnabled(bool enabled) {
+    loadMotorTestSettings();
+    motorTestCooldownEnabled = enabled;
+    persistMotorTestSettings();
 }
 
 void requestMotorTestStop() {

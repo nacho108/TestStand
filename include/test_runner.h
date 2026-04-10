@@ -5,6 +5,8 @@
 bool beginTestStorage();
 bool updateTelemetryDuringBlockingWait(unsigned long durationMs);
 bool runMotorTest();
+bool isMotorTestCooldownEnabled();
+void setMotorTestCooldownEnabled(bool enabled);
 void requestMotorTestStop();
 bool isMotorTestStopRequested();
 bool hasTestResults();

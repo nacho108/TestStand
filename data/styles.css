@@ -319,6 +319,28 @@ body::before {
   flex-wrap: wrap;
 }
 
+.test-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(32, 74, 112, 0.14);
+  border-radius: 3px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.test-toggle input {
+  margin: 0;
+}
+
+.test-toggle input:disabled + span {
+  opacity: 0.55;
+}
+
 .study-toolbar {
   display: flex;
   align-items: end;

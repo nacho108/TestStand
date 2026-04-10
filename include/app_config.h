@@ -42,6 +42,9 @@ static constexpr float DEFAULT_CURRENT_HIGH_RAW = 0.0f;
 static constexpr float DEFAULT_CURRENT_HIGH_REAL = 0.0f;
 
 static constexpr int DEFAULT_MOTOR_POLES = 28;
+static constexpr bool DEFAULT_MOTOR_TEST_COOLDOWN_ENABLED = true;
+static constexpr float MOTOR_TEST_COOLDOWN_THROTTLE_PERCENT = 30.0f;
+static constexpr unsigned long MOTOR_TEST_COOLDOWN_HOLD_MS = 10000;
 
 static constexpr int TEST_THROTTLE_LEVELS[] = {0, 5, 10, 20, 30, 35, 40, 45, 50, 55, 60, 65, 70, 80, 90, 100};
 static constexpr int TEST_MAX_RESULTS = sizeof(TEST_THROTTLE_LEVELS) / sizeof(TEST_THROTTLE_LEVELS[0]);

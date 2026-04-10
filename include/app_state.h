@@ -53,3 +53,4 @@ extern int testResultCount;
 extern bool testRunning;
 extern bool testSavePromptPending;
 extern bool testFilenamePromptPending;
+extern bool motorTestCooldownEnabled;

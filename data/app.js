@@ -2,6 +2,7 @@ window.addEventListener("load", () => {
   const ui = {
     viewTitle: document.getElementById("view-title"),
     startMotorTestButton: document.getElementById("start-motor-test-button"),
+    motorTestCoolingToggle: document.getElementById("motor-test-cooling-toggle"),
     stopMotorTestButton: document.getElementById("stop-motor-test-button"),
     downloadTestButton: document.getElementById("download-test-button"),
     studyFileSelect: document.getElementById("study-file-select"),
@@ -116,6 +117,7 @@ window.addEventListener("load", () => {
   let reconnectTimer = null;
   let pollTimer = null;
   let motorTestPending = false;
+  let motorTestCoolingUpdatePending = false;
   let lastKnownTestRunning = false;
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
@@ -580,6 +582,12 @@ window.addEventListener("load", () => {
     }
   };
 
+  const setMotorTestCoolingToggleState = (disabled = false) => {
+    if (ui.motorTestCoolingToggle) {
+      ui.motorTestCoolingToggle.disabled = disabled;
+    }
+  };
+
   const setStopMotorTestButtonState = (disabled = true) => {
     if (ui.stopMotorTestButton) {
       ui.stopMotorTestButton.disabled = disabled;
@@ -605,6 +613,7 @@ window.addEventListener("load", () => {
     setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
     setStopMotorTestButtonState(true);
     setDownloadTestButtonState(true);
+    setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
   };
 
   const rebuildStudySelect = () => {
@@ -718,12 +727,18 @@ window.addEventListener("load", () => {
       setMotorTestButtonState("Test running...", true);
       setStopMotorTestButtonState(false);
       setDownloadTestButtonState(true);
+      setMotorTestCoolingToggleState(true);
     } else {
       lastKnownTestRunning = false;
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
       setStopMotorTestButtonState(true);
       setDownloadTestButtonState(resultCount === 0);
+      setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
+    }
+
+    if (ui.motorTestCoolingToggle) {
+      ui.motorTestCoolingToggle.checked = Boolean(data.motor_test_cooling_enabled);
     }
 
     if (hasTelemetry) {
@@ -806,6 +821,7 @@ window.addEventListener("load", () => {
     setMotorTestButtonState("Starting...", true);
     setStopMotorTestButtonState(true);
     setDownloadTestButtonState(true);
+    setMotorTestCoolingToggleState(true);
     cachedTestResults = [];
     cachedTestResultCount = 0;
     updateChart(chartContexts.testing, []);
@@ -830,7 +846,43 @@ window.addEventListener("load", () => {
       motorTestPending = false;
       setMotorTestButtonState("Start test", false);
       setStopMotorTestButtonState(true);
+      setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
       setHealth(ui.powerHealth, "Failed to start motor test", "error");
+    }
+  };
+
+  const updateMotorTestCooling = async () => {
+    if (!ui.motorTestCoolingToggle || motorTestPending || lastKnownTestRunning) {
+      return;
+    }
+
+    const enabled = ui.motorTestCoolingToggle.checked;
+    motorTestCoolingUpdatePending = true;
+    setMotorTestCoolingToggleState(true);
+
+    try {
+      const body = new URLSearchParams({
+        cmd: enabled ? "motor test cooling on" : "motor test cooling off"
+      });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      await pollStatus();
+    } catch (error) {
+      ui.motorTestCoolingToggle.checked = !enabled;
+      setHealth(ui.powerHealth, "Failed to update cooldown flag", "error");
+    } finally {
+      motorTestCoolingUpdatePending = false;
+      setMotorTestCoolingToggleState(lastKnownTestRunning);
     }
   };
 
@@ -1055,6 +1107,10 @@ window.addEventListener("load", () => {
 
   if (ui.startMotorTestButton) {
     ui.startMotorTestButton.addEventListener("click", runMotorTest);
+  }
+
+  if (ui.motorTestCoolingToggle) {
+    ui.motorTestCoolingToggle.addEventListener("change", updateMotorTestCooling);
   }
 
   if (ui.stopMotorTestButton) {

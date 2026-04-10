@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=14">
+  <link rel="stylesheet" href="/styles.css?v=15">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -142,6 +142,10 @@
       <section class="testing-extras" data-view-pane="testing" hidden>
         <div class="test-actions">
           <button class="test-button" id="start-motor-test-button" type="button">Start test</button>
+          <label class="test-toggle" for="motor-test-cooling-toggle">
+            <input id="motor-test-cooling-toggle" type="checkbox" checked>
+            <span>Cooldown at 30% for 10 s</span>
+          </label>
           <button class="test-button test-button--stop" id="stop-motor-test-button" type="button" disabled>Stop test</button>
           <button class="test-button test-button--download" id="download-test-button" type="button" disabled>Download test file</button>
         </div>
@@ -346,6 +350,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=15"></script>
+  <script src="/app.js?v=16"></script>
 </body>
 </html>

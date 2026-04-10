@@ -44,3 +44,4 @@ int testResultCount = 0;
 bool testRunning = false;
 bool testSavePromptPending = false;
 bool testFilenamePromptPending = false;
+bool motorTestCooldownEnabled = DEFAULT_MOTOR_TEST_COOLDOWN_ENABLED;

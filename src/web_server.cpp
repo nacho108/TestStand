@@ -524,6 +524,7 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonUnsigned(json, "scale_last_read_ms", lastScaleReadMs);
     appendJsonUnsigned(json, "ir_last_read_ms", lastIrReadMs);
     appendJsonBool(json, "test_running", testRunning);
+    appendJsonBool(json, "motor_test_cooling_enabled", isMotorTestCooldownEnabled());
     appendJsonUnsigned(json, "motor_poles", (unsigned long)motorPoleCount);
     appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
     if (includeTestResults) {
