@@ -20,6 +20,11 @@ window.addEventListener("load", () => {
     studyFileVisibilityGroup: document.getElementById("study-file-visibility-group"),
     studyFileVisibilityEmpty: document.getElementById("study-file-visibility-empty"),
     studyFileVisibilityList: document.getElementById("study-file-visibility-list"),
+    studyEfficiencySummaryGroup: document.getElementById("study-efficiency-summary-group"),
+    testingEfficiencySummaryEmpty: document.getElementById("testing-efficiency-summary-empty"),
+    testingEfficiencySummaryList: document.getElementById("testing-efficiency-summary-list"),
+    studyEfficiencySummaryEmpty: document.getElementById("study-efficiency-summary-empty"),
+    studyEfficiencySummaryList: document.getElementById("study-efficiency-summary-list"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -222,6 +227,124 @@ window.addEventListener("load", () => {
   const normalizeChartRows = (rows) => Array.isArray(rows)
     ? rows.map((row) => normalizeChartRow(row))
     : [];
+
+  const calculateAverageEfficiencyForThrottleBand = (rows, minThrottle = 40, maxThrottle = 80) => {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return null;
+    }
+
+    const matchingValues = rows
+      .map((row) => ({
+        throttle: Number(row?.throttle_percent),
+        efficiency: Number(row?.thrust_efficiency_g_per_w)
+      }))
+      .filter(({ throttle, efficiency }) => (
+        Number.isFinite(throttle)
+        && Number.isFinite(efficiency)
+        && throttle >= minThrottle
+        && throttle <= maxThrottle
+      ))
+      .map(({ efficiency }) => efficiency);
+
+    if (matchingValues.length === 0) {
+      return null;
+    }
+
+    const sum = matchingValues.reduce((total, value) => total + value, 0);
+    return {
+      average: sum / matchingValues.length,
+      sampleCount: matchingValues.length
+    };
+  };
+
+  const getMaxThrottle = (rows) => rows.reduce((maxValue, row) => {
+    const throttle = Number(row?.throttle_percent);
+    return Number.isFinite(throttle) ? Math.max(maxValue, throttle) : maxValue;
+  }, Number.NEGATIVE_INFINITY);
+
+  const renderEfficiencySummaryList = (listElement, emptyElement, items, emptyMessage) => {
+    if (!listElement || !emptyElement) {
+      return;
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      listElement.innerHTML = "";
+      emptyElement.hidden = false;
+      setText(emptyElement, emptyMessage);
+      return;
+    }
+
+    emptyElement.hidden = true;
+    listElement.innerHTML = items
+      .map((item) => `
+        <article class="summary-metric">
+          <span class="summary-metric__label">${escapeHtml(item.label)}</span>
+          <strong class="summary-metric__value summary-metric__value--efficiency">${escapeHtml(formatNumber(item.average, "gr/W", 2))}</strong>
+        </article>
+      `)
+      .join("");
+  };
+
+  const updateTestingEfficiencySummary = (rows, isTestRunning) => {
+    const maxThrottle = getMaxThrottle(rows);
+    if (isTestRunning) {
+      renderEfficiencySummaryList(
+        ui.testingEfficiencySummaryList,
+        ui.testingEfficiencySummaryEmpty,
+        [],
+        "Results appear after the test finishes and reaches 80% throttle."
+      );
+      return;
+    }
+
+    if (!Number.isFinite(maxThrottle) || maxThrottle < 80) {
+      renderEfficiencySummaryList(
+        ui.testingEfficiencySummaryList,
+        ui.testingEfficiencySummaryEmpty,
+        [],
+        "Results will appear once a completed test reaches at least 80% throttle."
+      );
+      return;
+    }
+
+    const summary = calculateAverageEfficiencyForThrottleBand(rows, 40, 80);
+    renderEfficiencySummaryList(
+      ui.testingEfficiencySummaryList,
+      ui.testingEfficiencySummaryEmpty,
+      summary ? [{ label: "Completed test", ...summary }] : [],
+      "No valid efficiency points were found between 40% and 80% throttle."
+    );
+  };
+
+  const updateStudyEfficiencySummary = (datasets) => {
+    const visibleDatasets = Array.isArray(datasets)
+      ? datasets.filter((dataset) => dataset && dataset.visible !== false)
+      : [];
+
+    const items = visibleDatasets
+      .map((dataset) => {
+        const summary = calculateAverageEfficiencyForThrottleBand(dataset.rows, 40, 80);
+        if (!summary) {
+          return null;
+        }
+
+        return {
+          label: dataset.name || "CSV",
+          average: summary.average,
+          sampleCount: summary.sampleCount
+        };
+      })
+      .filter(Boolean);
+
+    renderEfficiencySummaryList(
+      ui.studyEfficiencySummaryList,
+      ui.studyEfficiencySummaryEmpty,
+      items,
+      visibleDatasets.length === 0
+        ? "Load visible CSV data to compare average efficiency."
+        : "No visible CSV has valid efficiency points between 40% and 80% throttle."
+    );
+  };
 
   const setText = (element, value) => {
     if (element) {
@@ -589,18 +712,14 @@ window.addEventListener("load", () => {
 
     ui.studyFileVisibilityEmpty.hidden = true;
     ui.studyFileVisibilityList.innerHTML = studyDatasets
-      .map((dataset) => {
-        const sourceLabel = dataset.source === "saved" ? "memory" : "PC";
-        return `
+      .map((dataset) => `
           <label class="chart-file-picker__option" for="study-dataset-${escapeHtml(dataset.id)}">
             <input id="study-dataset-${escapeHtml(dataset.id)}" type="checkbox" name="study-dataset-visibility" value="${escapeHtml(dataset.id)}"${dataset.visible === false ? "" : " checked"}>
             <span>
               <span class="chart-file-picker__name">${escapeHtml(dataset.name)}</span>
-              <span class="chart-file-picker__meta">${escapeHtml(sourceLabel)} | ${dataset.rows.length} pts</span>
             </span>
           </label>
-        `;
-      })
+        `)
       .join("");
 
     ui.studyFileVisibilityList
@@ -631,8 +750,10 @@ window.addEventListener("load", () => {
 
     if (maxHeight > 0) {
       ui.studyFileVisibilityGroup.style.setProperty("--study-file-picker-max-height", `${Math.floor(maxHeight)}px`);
+      ui.studyEfficiencySummaryGroup?.style.setProperty("--study-file-picker-max-height", `${Math.floor(maxHeight)}px`);
     } else {
       ui.studyFileVisibilityGroup.style.removeProperty("--study-file-picker-max-height");
+      ui.studyEfficiencySummaryGroup?.style.removeProperty("--study-file-picker-max-height");
     }
   };
 
@@ -719,6 +840,7 @@ window.addEventListener("load", () => {
 
     renderStudyFileControls();
     syncStudyFilePickerHeight();
+    updateStudyEfficiencySummary(studyDatasets);
   };
 
   const parseCsvNumber = (value) => {
@@ -947,6 +1069,7 @@ window.addEventListener("load", () => {
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
     updateChart(chartContexts.testing, cachedTestResults);
+    updateTestingEfficiencySummary(cachedTestResults, Boolean(data.test_running));
 
     if (Boolean(data.test_running)) {
       lastKnownTestRunning = true;
@@ -1056,6 +1179,7 @@ window.addEventListener("load", () => {
     cachedTestResults = [];
     cachedTestResultCount = 0;
     updateChart(chartContexts.testing, []);
+    updateTestingEfficiencySummary(cachedTestResults, true);
 
     try {
       const direction = getSelectedMotorTestDirection();

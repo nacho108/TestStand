@@ -465,6 +465,94 @@ body::before {
   box-shadow: var(--shadow-md);
 }
 
+.summary-metric {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(32, 74, 112, 0.12);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.summary-metric__label {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.summary-metric__value {
+  color: var(--ink);
+  font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.summary-metric__value--efficiency {
+  color: #b06a00;
+}
+
+.summary-metric__detail {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.chart-sidebar {
+  position: absolute;
+  top: 18px;
+  left: 8px;
+  z-index: 2;
+  display: grid;
+  gap: 12px;
+}
+
+.chart-sidebar--testing {
+  width: 120px;
+}
+
+.chart-sidebar--study {
+  width: 220px;
+}
+
+.chart-summary-panel {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-height: min(var(--study-file-picker-max-height, 180px), 100%);
+  margin: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid rgba(32, 74, 112, 0.12);
+  border-radius: 4px;
+  background: rgba(237, 243, 251, 0.96);
+}
+
+.chart-summary-panel--testing {
+  max-height: calc(100% - 54px);
+}
+
+.chart-summary-panel__title {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.chart-summary-panel__empty {
+  color: var(--ink-soft);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.chart-summary-panel__list {
+  display: grid;
+  gap: 8px;
+}
+
 .chart-card__legend {
   display: flex;
   flex-wrap: wrap;
@@ -503,21 +591,50 @@ body::before {
   background: rgba(255, 255, 255, 0.88);
 }
 
+.chart-plot--testing .chart-plot__grid {
+  inset: 18px 92px 36px 220px;
+}
+
+.chart-plot--testing .chart-plot__axis--y {
+  left: 220px;
+}
+
+.chart-plot--testing .chart-plot__axis--x {
+  left: 220px;
+}
+
+.chart-plot--testing .chart-plot__axis--top {
+  left: 220px;
+}
+
+.chart-plot--testing .chart-line,
+.chart-plot--testing .chart-line-layer {
+  inset: 18px 92px 36px 220px;
+}
+
+.chart-plot--testing .chart-ticks {
+  left: 220px;
+}
+
+.chart-plot--testing .chart-scale--left {
+  left: 136px;
+}
+
 .chart-plot--study .chart-plot__grid {
-  inset: 18px 204px 36px 332px;
+  inset: 18px 204px 36px 460px;
 }
 
 .chart-plot--study .chart-plot__axis--y {
-  left: 332px;
+  left: 460px;
 }
 
 .chart-plot--study .chart-plot__axis--x {
-  left: 332px;
+  left: 460px;
   right: 204px;
 }
 
 .chart-plot--study .chart-plot__axis--top {
-  left: 332px;
+  left: 460px;
   right: 204px;
 }
 
@@ -527,16 +644,16 @@ body::before {
 
 .chart-plot--study .chart-line,
 .chart-plot--study .chart-line-layer {
-  inset: 18px 204px 36px 332px;
+  inset: 18px 204px 36px 460px;
 }
 
 .chart-plot--study .chart-ticks {
-  left: 332px;
+  left: 460px;
   right: 204px;
 }
 
 .chart-plot--study .chart-scale--left {
-  left: 248px;
+  left: 376px;
 }
 
 .chart-plot--study .chart-scale--right {
@@ -735,13 +852,10 @@ body::before {
 }
 
 .chart-series-picker {
-  position: absolute;
-  top: 18px;
-  left: 8px;
-  z-index: 2;
   display: grid;
   gap: 8px;
-  width: 100px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
   margin: 0;
   padding: 10px 12px;
   border: 1px solid rgba(32, 74, 112, 0.12);
@@ -750,6 +864,7 @@ body::before {
 }
 
 .chart-series-picker__title {
+  grid-column: 1 / -1;
   padding: 0;
   color: var(--ink-soft);
   font-size: 0.72rem;
@@ -771,14 +886,25 @@ body::before {
   margin: 0;
 }
 
+.chart-summary-panel .summary-metric {
+  gap: 3px;
+  padding: 8px 9px;
+}
+
+.chart-summary-panel .summary-metric__label {
+  font-size: 0.38rem;
+  letter-spacing: 0.05em;
+}
+
+.chart-summary-panel .summary-metric__value {
+  font-size: clamp(0.65rem, 1vw, 0.9rem);
+  line-height: 1;
+}
+
 .chart-file-picker {
-  position: absolute;
-  top: 18px;
-  left: 120px;
-  z-index: 2;
   display: grid;
   gap: 8px;
-  width: 120px;
+  width: 100%;
   max-height: min(var(--study-file-picker-max-height, 180px), 100%);
   margin: 0;
   padding: 10px 12px;
@@ -827,16 +953,6 @@ body::before {
   overflow-wrap: anywhere;
 }
 
-.chart-file-picker__meta {
-  display: block;
-  margin-top: 2px;
-  color: var(--ink-soft);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
 @media (max-width: 1180px) {
   .group-grid {
     grid-template-columns: 1fr;
@@ -863,12 +979,48 @@ body::before {
   }
 
   .chart-plot--study .chart-plot__grid {
-    inset: 188px 92px 120px 92px;
+    inset: 284px 92px 120px 92px;
+  }
+
+  .chart-plot--testing .chart-plot__grid {
+    inset: 148px 92px 36px 92px;
+  }
+
+  .chart-plot--testing .chart-plot__axis--y {
+    left: 92px;
+    top: 148px;
+    bottom: 36px;
+  }
+
+  .chart-plot--testing .chart-plot__axis--x {
+    left: 92px;
+  }
+
+  .chart-plot--testing .chart-plot__axis--top {
+    left: 92px;
+  }
+
+  .chart-plot--testing .chart-line,
+  .chart-plot--testing .chart-line-layer {
+    inset: 148px 92px 36px 92px;
+  }
+
+  .chart-plot--testing .chart-ticks {
+    left: 92px;
+  }
+
+  .chart-plot--testing .chart-scale {
+    top: 148px;
+    bottom: 36px;
+  }
+
+  .chart-plot--testing .chart-scale--left {
+    left: 8px;
   }
 
   .chart-plot--study .chart-plot__axis--y {
     left: 92px;
-    top: 188px;
+    top: 284px;
     bottom: 120px;
   }
 
@@ -879,7 +1031,7 @@ body::before {
 
   .chart-plot--study .chart-line,
   .chart-plot--study .chart-line-layer {
-    inset: 188px 92px 120px 92px;
+    inset: 284px 92px 120px 92px;
   }
 
   .chart-plot--study .chart-ticks {
@@ -889,7 +1041,7 @@ body::before {
   }
 
   .chart-plot--study .chart-scale {
-    top: 188px;
+    top: 284px;
     bottom: 120px;
   }
 
@@ -901,18 +1053,27 @@ body::before {
     right: 8px;
   }
 
-  .chart-series-picker {
+  .chart-sidebar {
     top: 8px;
     left: 8px;
-    width: calc(50% - 12px);
+    right: 8px;
+    width: auto;
+  }
+
+  .chart-series-picker {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .chart-file-picker {
-    top: 8px;
-    left: calc(50% + 4px);
-    width: calc(50% - 12px);
     max-height: min(var(--study-file-picker-max-height, 104px), 100%);
+  }
+
+  .chart-summary-panel {
+    max-height: min(var(--study-file-picker-max-height, 104px), 100%);
+  }
+
+  .chart-summary-panel--testing {
+    max-height: 120px;
   }
 
   .chart-axis-picker {

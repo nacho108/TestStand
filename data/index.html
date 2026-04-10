@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=19">
+  <link rel="stylesheet" href="/styles.css?v=20">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -174,7 +174,14 @@
             <span class="legend-rpm">RPM</span>
             <span class="legend-temp">Motor temp</span>
           </div>
-          <div class="chart-plot" aria-hidden="true">
+          <div class="chart-plot chart-plot--testing" aria-hidden="true">
+            <div class="chart-sidebar chart-sidebar--testing">
+              <fieldset class="chart-summary-panel chart-summary-panel--testing" id="testing-efficiency-summary-group">
+                <legend class="chart-summary-panel__title">Efficiency 40-80%</legend>
+                <div class="chart-summary-panel__empty" id="testing-efficiency-summary-empty">Results appear after the test finishes and reaches 80% throttle.</div>
+                <div class="chart-summary-panel__list" id="testing-efficiency-summary-list"></div>
+              </fieldset>
+            </div>
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--voltage" id="testing-chart-left-top-voltage">--</span>
@@ -317,42 +324,49 @@
             <span class="legend-temp">Motor temp</span>
           </div>
           <div class="chart-plot chart-plot--study">
-            <fieldset class="chart-series-picker">
-              <legend class="chart-series-picker__title">Variables</legend>
-              <label class="chart-series-picker__option" for="study-series-thrust">
-                <input id="study-series-thrust" type="checkbox" name="study-series" value="thrust" checked>
-                <span>Thrust</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-efficiency">
-                <input id="study-series-efficiency" type="checkbox" name="study-series" value="efficiency" checked>
-                <span>Thrust eff</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-power">
-                <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
-                <span>Watts</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-voltage">
-                <input id="study-series-voltage" type="checkbox" name="study-series" value="voltage" checked>
-                <span>Voltage</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-current">
-                <input id="study-series-current" type="checkbox" name="study-series" value="current" checked>
-                <span>Current</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-rpm">
-                <input id="study-series-rpm" type="checkbox" name="study-series" value="rpm" checked>
-                <span>RPM</span>
-              </label>
-              <label class="chart-series-picker__option" for="study-series-temp">
-                <input id="study-series-temp" type="checkbox" name="study-series" value="temp" checked>
-                <span>Motor temp</span>
-              </label>
-            </fieldset>
-            <fieldset class="chart-file-picker" id="study-file-visibility-group">
-              <legend class="chart-file-picker__title">CSV files</legend>
-              <div class="chart-file-picker__empty" id="study-file-visibility-empty">No CSV loaded</div>
-              <div class="chart-file-picker__list" id="study-file-visibility-list"></div>
-            </fieldset>
+            <div class="chart-sidebar chart-sidebar--study">
+              <fieldset class="chart-series-picker">
+                <legend class="chart-series-picker__title">Variables</legend>
+                <label class="chart-series-picker__option" for="study-series-thrust">
+                  <input id="study-series-thrust" type="checkbox" name="study-series" value="thrust" checked>
+                  <span>Thrust</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-efficiency">
+                  <input id="study-series-efficiency" type="checkbox" name="study-series" value="efficiency" checked>
+                  <span>Thrust eff</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-power">
+                  <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
+                  <span>Watts</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-voltage">
+                  <input id="study-series-voltage" type="checkbox" name="study-series" value="voltage" checked>
+                  <span>Voltage</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-current">
+                  <input id="study-series-current" type="checkbox" name="study-series" value="current" checked>
+                  <span>Current</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-rpm">
+                  <input id="study-series-rpm" type="checkbox" name="study-series" value="rpm" checked>
+                  <span>RPM</span>
+                </label>
+                <label class="chart-series-picker__option" for="study-series-temp">
+                  <input id="study-series-temp" type="checkbox" name="study-series" value="temp" checked>
+                  <span>Motor temp</span>
+                </label>
+              </fieldset>
+              <fieldset class="chart-file-picker" id="study-file-visibility-group">
+                <legend class="chart-file-picker__title">CSV files</legend>
+                <div class="chart-file-picker__empty" id="study-file-visibility-empty">No CSV loaded</div>
+                <div class="chart-file-picker__list" id="study-file-visibility-list"></div>
+              </fieldset>
+              <fieldset class="chart-summary-panel chart-summary-panel--study" id="study-efficiency-summary-group">
+                <legend class="chart-summary-panel__title">Efficiency 40-80%</legend>
+                <div class="chart-summary-panel__empty" id="study-efficiency-summary-empty">Load visible CSV data to compare average efficiency.</div>
+                <div class="chart-summary-panel__list" id="study-efficiency-summary-list"></div>
+              </fieldset>
+            </div>
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--voltage" id="study-chart-left-top-voltage">--</span>
@@ -453,6 +467,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=19"></script>
+  <script src="/app.js?v=20"></script>
 </body>
 </html>
