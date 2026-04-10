@@ -319,6 +319,44 @@ body::before {
   flex-wrap: wrap;
 }
 
+.test-radio-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 38px;
+  margin: 0 0 0 22px;
+  padding: 0 12px;
+  border: 1px solid rgba(32, 74, 112, 0.14);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.test-radio-group legend {
+  padding: 0 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.test-radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.test-radio-option input {
+  margin: 0;
+}
+
+.test-radio-option input:disabled + span {
+  opacity: 0.55;
+}
+
 .test-toggle {
   display: inline-flex;
   align-items: center;

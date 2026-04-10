@@ -5,8 +5,12 @@
 bool beginTestStorage();
 bool updateTelemetryDuringBlockingWait(unsigned long durationMs);
 bool runMotorTest();
+bool runMotorTest(bool pusherMode);
 bool isMotorTestCooldownEnabled();
 void setMotorTestCooldownEnabled(bool enabled);
+bool isMotorTestPusherMode();
+void setMotorTestPusherMode(bool enabled);
+float applyMotorTestDirectionToThrust(float thrustGrams);
 void requestMotorTestStop();
 bool isMotorTestStopRequested();
 bool hasTestResults();

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=15">
+  <link rel="stylesheet" href="/styles.css?v=16">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -148,6 +148,17 @@
           </label>
           <button class="test-button test-button--stop" id="stop-motor-test-button" type="button" disabled>Stop test</button>
           <button class="test-button test-button--download" id="download-test-button" type="button" disabled>Download test file</button>
+          <fieldset class="test-radio-group" id="motor-test-direction-group">
+            <legend>Direction</legend>
+            <label class="test-radio-option" for="motor-test-direction-puller">
+              <input id="motor-test-direction-puller" type="radio" name="motor-test-direction" value="puller" checked>
+              <span>Puller</span>
+            </label>
+            <label class="test-radio-option" for="motor-test-direction-pusher">
+              <input id="motor-test-direction-pusher" type="radio" name="motor-test-direction" value="pusher">
+              <span>Pusher</span>
+            </label>
+          </fieldset>
         </div>
 
         <article class="chart-card">

@@ -16,6 +16,7 @@ namespace {
 
 constexpr const char* kTestStorageDir = "/tests";
 constexpr const char* kTestCooldownPrefKey = "test_cool";
+constexpr const char* kTestDirectionPrefKey = "test_push";
 bool motorTestStopRequested = false;
 bool motorTestSettingsLoaded = false;
 
@@ -122,6 +123,7 @@ void loadMotorTestSettings() {
         kTestCooldownPrefKey,
         DEFAULT_MOTOR_TEST_COOLDOWN_ENABLED
     );
+    motorTestPusherMode = preferences.getBool(kTestDirectionPrefKey, false);
     preferences.end();
     motorTestSettingsLoaded = true;
 }
@@ -129,8 +131,13 @@ void loadMotorTestSettings() {
 void persistMotorTestSettings() {
     preferences.begin("am32cli", false);
     preferences.putBool(kTestCooldownPrefKey, motorTestCooldownEnabled);
+    preferences.putBool(kTestDirectionPrefKey, motorTestPusherMode);
     preferences.end();
     motorTestSettingsLoaded = true;
+}
+
+const char* getMotorTestDirectionLabel() {
+    return motorTestPusherMode ? "pusher" : "puller";
 }
 
 bool runMotorTestCooldownPhase() {
@@ -424,7 +431,12 @@ bool updateTelemetryDuringBlockingWait(unsigned long durationMs) {
 }
 
 bool runMotorTest() {
+    return runMotorTest(false);
+}
+
+bool runMotorTest(bool pusherMode) {
     loadMotorTestSettings();
+    setMotorTestPusherMode(pusherMode);
 
     if (!lastTlm.valid) {
         Serial.println("Cannot start test: no valid telemetry yet");
@@ -447,6 +459,8 @@ bool runMotorTest() {
     clearTestResults();
 
     Serial.println("Starting motor test...");
+    Serial.print("Direction mode: ");
+    Serial.println(getMotorTestDirectionLabel());
     Serial.println("Step rule:");
     Serial.println("  each step -> proportional ramp + 1.5 seconds at target");
     Serial.println("  first 0.5 second at target = stabilization");
@@ -567,7 +581,7 @@ bool runMotorTest() {
         }
 
         if (scaleSampleCount > 0) {
-            row.weightGrams = sumWeight / scaleSampleCount;
+            row.weightGrams = applyMotorTestDirectionToThrust(sumWeight / scaleSampleCount);
         } else {
             row.weightGrams = NAN;
         }
@@ -614,6 +628,25 @@ void setMotorTestCooldownEnabled(bool enabled) {
     loadMotorTestSettings();
     motorTestCooldownEnabled = enabled;
     persistMotorTestSettings();
+}
+
+bool isMotorTestPusherMode() {
+    loadMotorTestSettings();
+    return motorTestPusherMode;
+}
+
+void setMotorTestPusherMode(bool enabled) {
+    loadMotorTestSettings();
+    motorTestPusherMode = enabled;
+    persistMotorTestSettings();
+}
+
+float applyMotorTestDirectionToThrust(float thrustGrams) {
+    if (isnan(thrustGrams)) {
+        return thrustGrams;
+    }
+
+    return isMotorTestPusherMode() ? -thrustGrams : thrustGrams;
 }
 
 void requestMotorTestStop() {

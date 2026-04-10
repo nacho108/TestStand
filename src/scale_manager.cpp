@@ -135,6 +135,7 @@ void beginScaleManager() {
     scale.setGain(NAU7802_GAIN_128);
     scale.setSampleRate(NAU7802_SPS_80);
     scale.calibrateAFE();
+    
     loadScaleCalibration();
     clearScaleWindow();
     startupAutoTarePending = true;

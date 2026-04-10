@@ -54,3 +54,4 @@ extern bool testRunning;
 extern bool testSavePromptPending;
 extern bool testFilenamePromptPending;
 extern bool motorTestCooldownEnabled;
+extern bool motorTestPusherMode;

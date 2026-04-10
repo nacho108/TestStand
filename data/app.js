@@ -5,6 +5,7 @@ window.addEventListener("load", () => {
     motorTestCoolingToggle: document.getElementById("motor-test-cooling-toggle"),
     stopMotorTestButton: document.getElementById("stop-motor-test-button"),
     downloadTestButton: document.getElementById("download-test-button"),
+    motorTestDirectionInputs: Array.from(document.querySelectorAll('input[name="motor-test-direction"]')),
     studyFileSelect: document.getElementById("study-file-select"),
     loadStudyButton: document.getElementById("load-study-button"),
     openStudyFileButton: document.getElementById("open-study-file-button"),
@@ -118,6 +119,7 @@ window.addEventListener("load", () => {
   let pollTimer = null;
   let motorTestPending = false;
   let motorTestCoolingUpdatePending = false;
+  let motorTestDirectionUpdatePending = false;
   let lastKnownTestRunning = false;
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
@@ -168,10 +170,12 @@ window.addEventListener("load", () => {
     return `${Number(value).toFixed(digits)} ${unit}`;
   };
 
-  const setScaleLabels = (topElement, midElement, bottomElement, maxValue, unit, digits = 0) => {
-    setText(topElement, formatScaleValue(maxValue, unit, digits));
-    setText(midElement, formatScaleValue(maxValue / 2, unit, digits));
-    setText(bottomElement, formatScaleValue(0, unit, digits));
+  const setScaleLabels = (topElement, midElement, bottomElement, minValue, maxValue, unit, digits = 0) => {
+    const safeMin = Number.isFinite(minValue) ? minValue : 0;
+    const safeMax = Number.isFinite(maxValue) ? maxValue : 0;
+    setText(topElement, formatScaleValue(safeMax, unit, digits));
+    setText(midElement, formatScaleValue((safeMin + safeMax) / 2, unit, digits));
+    setText(bottomElement, formatScaleValue(safeMin, unit, digits));
   };
 
   const formatAxisTick = (value, unit = "", digits = 0) => {
@@ -183,24 +187,44 @@ window.addEventListener("load", () => {
     return `${Number(value).toFixed(digits)}${suffix}`;
   };
 
-  const getSeriesMax = (rows, valueKey) => {
+  const getSeriesRange = (rows, valueKey, { includeZero = true, fallbackMin = 0, fallbackMax = 0 } = {}) => {
     if (!Array.isArray(rows) || rows.length === 0) {
-      return 0;
+      return { min: fallbackMin, max: fallbackMax };
     }
 
-    return rows.reduce((max, row) => {
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+
+    rows.forEach((row) => {
       const value = Number(row?.[valueKey]);
       if (!Number.isFinite(value)) {
-        return max;
+        return;
       }
 
-      return Math.max(max, value);
-    }, 0);
-  };
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    });
 
-  const getAxisMax = (rows, valueKey, fallback = 0) => {
-    const maxValue = getSeriesMax(rows, valueKey);
-    return maxValue > 0 ? maxValue : fallback;
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      return { min: fallbackMin, max: fallbackMax };
+    }
+
+    if (includeZero) {
+      min = Math.min(min, 0);
+      max = Math.max(max, 0);
+    }
+
+    if (min === max) {
+      if (min === 0) {
+        max = fallbackMax !== fallbackMin ? fallbackMax : 1;
+      } else if (min > 0) {
+        min = 0;
+      } else {
+        max = 0;
+      }
+    }
+
+    return { min, max };
   };
 
   const flattenStudyRows = (datasets, visibleOnly = false) => {
@@ -222,18 +246,18 @@ window.addEventListener("load", () => {
   };
 
   const updateChartScales = (context, rows) => {
-    const maxPower = getSeriesMax(rows, "power_w");
-    const maxRpm = getSeriesMax(rows, "rpm");
-    const maxThrust = getSeriesMax(rows, "thrust_grams");
-    const maxCurrent = getSeriesMax(rows, "current_a");
-    const maxTemp = getSeriesMax(rows, "motor_temperature_c");
+    const powerRange = getSeriesRange(rows, "power_w", { fallbackMax: 1 });
+    const rpmRange = getSeriesRange(rows, "rpm", { fallbackMax: 1 });
+    const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const currentRange = getSeriesRange(rows, "current_a", { fallbackMax: 1 });
+    const tempRange = getSeriesRange(rows, "motor_temperature_c", { fallbackMax: 1 });
     const hideThrustScale = context.xAxisKey === "thrust_grams";
 
-    setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, maxPower, "W", 0);
-    setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, maxRpm, "rpm", 0);
-    setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, maxThrust, "g", 0);
-    setScaleLabels(context.rightTopCurrent, context.rightMidCurrent, context.rightBottomCurrent, maxCurrent, "A", 2);
-    setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, maxTemp, "C", 1);
+    setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, powerRange.min, powerRange.max, "W", 0);
+    setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, rpmRange.min, rpmRange.max, "rpm", 0);
+    setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, thrustRange.min, thrustRange.max, "g", 0);
+    setScaleLabels(context.rightTopCurrent, context.rightMidCurrent, context.rightBottomCurrent, currentRange.min, currentRange.max, "A", 2);
+    setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, tempRange.min, tempRange.max, "C", 1);
 
     [context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust].forEach((element) => {
       if (element) {
@@ -250,14 +274,14 @@ window.addEventListener("load", () => {
     const isThrustAxis = context.xAxisKey === "thrust_grams";
     const unit = isThrustAxis ? "g" : "";
     const digits = isThrustAxis ? 0 : 0;
-    const maxValue = isThrustAxis
-      ? getSeriesMax(rows, "thrust_grams")
-      : 100;
+    const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const minValue = isThrustAxis ? thrustRange.min : 0;
+    const maxValue = isThrustAxis ? thrustRange.max : 100;
 
     setText(context.xLabel, isThrustAxis ? "Thrust" : "Throttle %");
     context.xTicks.forEach((tick, index) => {
       const ratio = context.xTicks.length === 1 ? 0 : index / (context.xTicks.length - 1);
-      setText(tick, formatAxisTick(maxValue * ratio, unit, digits));
+      setText(tick, formatAxisTick(minValue + (maxValue - minValue) * ratio, unit, digits));
     });
   };
 
@@ -309,12 +333,20 @@ window.addEventListener("load", () => {
 
     points.sort((a, b) => a.x - b.x);
 
-    const maxX = Number(axisMax.x);
-    const maxY = Number(axisMax.y);
-    const derivedMaxX = points.reduce((max, point) => Math.max(max, point.x), 0);
-    const derivedMaxY = points.reduce((max, point) => Math.max(max, point.y), 0);
-    const safeMaxX = Number.isFinite(maxX) && maxX > 0 ? maxX : (derivedMaxX > 0 ? derivedMaxX : 1);
-    const safeMaxY = Number.isFinite(maxY) && maxY > 0 ? maxY : (derivedMaxY > 0 ? derivedMaxY : 1);
+    const derivedXRange = points.reduce((range, point) => ({
+      min: Math.min(range.min, point.x),
+      max: Math.max(range.max, point.x)
+    }), { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY });
+    const derivedYRange = points.reduce((range, point) => ({
+      min: Math.min(range.min, point.y),
+      max: Math.max(range.max, point.y)
+    }), { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY });
+    const safeMinX = Number.isFinite(axisMax.minX) ? axisMax.minX : (Number.isFinite(derivedXRange.min) ? derivedXRange.min : 0);
+    const safeMaxX = Number.isFinite(axisMax.maxX) ? axisMax.maxX : (Number.isFinite(derivedXRange.max) ? derivedXRange.max : 1);
+    const safeMinY = Number.isFinite(axisMax.minY) ? axisMax.minY : (Number.isFinite(derivedYRange.min) ? derivedYRange.min : 0);
+    const safeMaxY = Number.isFinite(axisMax.maxY) ? axisMax.maxY : (Number.isFinite(derivedYRange.max) ? derivedYRange.max : 1);
+    const xSpan = safeMaxX !== safeMinX ? (safeMaxX - safeMinX) : 1;
+    const ySpan = safeMaxY !== safeMinY ? (safeMaxY - safeMinY) : 1;
     const plotPaddingX = 1.5;
     const plotPaddingY = 1.5;
     const plotWidth = 100 - plotPaddingX * 2;
@@ -322,8 +354,8 @@ window.addEventListener("load", () => {
 
     return points
       .map((point, index) => {
-        const px = plotPaddingX + (point.x / safeMaxX) * plotWidth;
-        const py = 100 - plotPaddingY - (point.y / safeMaxY) * plotHeight;
+        const px = plotPaddingX + ((point.x - safeMinX) / xSpan) * plotWidth;
+        const py = 100 - plotPaddingY - ((point.y - safeMinY) / ySpan) * plotHeight;
         const clampedX = Math.max(0, Math.min(100, px));
         const clampedY = Math.max(0, Math.min(100, py));
         return `${index === 0 ? "M" : "L"}${clampedX.toFixed(2)},${clampedY.toFixed(2)}`;
@@ -331,16 +363,25 @@ window.addEventListener("load", () => {
       .join(" ");
   };
 
-  const getChartAxisBounds = (rows, xAxisKey) => ({
-    x: xAxisKey === "thrust_grams"
-      ? getAxisMax(rows, "thrust_grams", 1)
-      : 100,
-    thrust: getAxisMax(rows, "thrust_grams", 1),
-    power: getAxisMax(rows, "power_w", 1),
-    current: getAxisMax(rows, "current_a", 1),
-    rpm: getAxisMax(rows, "rpm", 1),
-    temp: getAxisMax(rows, "motor_temperature_c", 1)
-  });
+  const getChartAxisBounds = (rows, xAxisKey) => {
+    const xRange = xAxisKey === "thrust_grams"
+      ? getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 })
+      : { min: 0, max: 100 };
+    const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const powerRange = getSeriesRange(rows, "power_w", { fallbackMin: 0, fallbackMax: 1 });
+    const currentRange = getSeriesRange(rows, "current_a", { fallbackMin: 0, fallbackMax: 1 });
+    const rpmRange = getSeriesRange(rows, "rpm", { fallbackMin: 0, fallbackMax: 1 });
+    const tempRange = getSeriesRange(rows, "motor_temperature_c", { fallbackMin: 0, fallbackMax: 1 });
+
+    return {
+      x: xRange,
+      thrust: thrustRange,
+      power: powerRange,
+      current: currentRange,
+      rpm: rpmRange,
+      temp: tempRange
+    };
+  };
 
   const updateChart = (context, rows) => {
     updateChartScales(context, rows);
@@ -352,40 +393,50 @@ window.addEventListener("load", () => {
 
     if (context.thrustPath) {
       context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey, {
-        x: axisBounds.x,
-        y: axisBounds.thrust
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.thrust.min,
+        maxY: axisBounds.thrust.max
       }));
       context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerPath) {
       context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey, {
-        x: axisBounds.x,
-        y: axisBounds.power
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.power.min,
+        maxY: axisBounds.power.max
       }));
       context.powerPath.parentElement.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.currentPath) {
       context.currentPath.setAttribute("d", buildChartPath(rows, "current_a", xAxisKey, {
-        x: axisBounds.x,
-        y: axisBounds.current
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.current.min,
+        maxY: axisBounds.current.max
       }));
       context.currentPath.parentElement.style.display = visibleSeries.current === false ? "none" : "";
     }
 
     if (context.rpmPath) {
       context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey, {
-        x: axisBounds.x,
-        y: axisBounds.rpm
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.rpm.min,
+        maxY: axisBounds.rpm.max
       }));
       context.rpmPath.parentElement.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempPath) {
       context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey, {
-        x: axisBounds.x,
-        y: axisBounds.temp
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.temp.min,
+        maxY: axisBounds.temp.max
       }));
       context.tempPath.parentElement.style.display = visibleSeries.temp === false ? "none" : "";
     }
@@ -471,40 +522,50 @@ window.addEventListener("load", () => {
 
     if (context.thrustLayer) {
       context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_grams", xAxisKey, "chart-line--thrust", {
-        x: axisBounds.x,
-        y: axisBounds.thrust
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.thrust.min,
+        maxY: axisBounds.thrust.max
       });
       context.thrustLayer.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.powerLayer) {
       context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "power_w", xAxisKey, "chart-line--power", {
-        x: axisBounds.x,
-        y: axisBounds.power
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.power.min,
+        maxY: axisBounds.power.max
       });
       context.powerLayer.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.currentLayer) {
       context.currentLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "current_a", xAxisKey, "chart-line--current", {
-        x: axisBounds.x,
-        y: axisBounds.current
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.current.min,
+        maxY: axisBounds.current.max
       });
       context.currentLayer.style.display = visibleSeries.current === false ? "none" : "";
     }
 
     if (context.rpmLayer) {
       context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "rpm", xAxisKey, "chart-line--rpm", {
-        x: axisBounds.x,
-        y: axisBounds.rpm
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.rpm.min,
+        maxY: axisBounds.rpm.max
       });
       context.rpmLayer.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempLayer) {
       context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "motor_temperature_c", xAxisKey, "chart-line--temp", {
-        x: axisBounds.x,
-        y: axisBounds.temp
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.temp.min,
+        maxY: axisBounds.temp.max
       });
       context.tempLayer.style.display = visibleSeries.temp === false ? "none" : "";
     }
@@ -588,6 +649,24 @@ window.addEventListener("load", () => {
     }
   };
 
+  const setMotorTestDirectionState = (disabled = false) => {
+    ui.motorTestDirectionInputs.forEach((input) => {
+      input.disabled = disabled;
+    });
+  };
+
+  const getSelectedMotorTestDirection = () => {
+    const selected = ui.motorTestDirectionInputs.find((input) => input.checked);
+    return selected?.value === "pusher" ? "pusher" : "puller";
+  };
+
+  const setSelectedMotorTestDirection = (direction) => {
+    const normalized = direction === "pusher" ? "pusher" : "puller";
+    ui.motorTestDirectionInputs.forEach((input) => {
+      input.checked = input.value === normalized;
+    });
+  };
+
   const setStopMotorTestButtonState = (disabled = true) => {
     if (ui.stopMotorTestButton) {
       ui.stopMotorTestButton.disabled = disabled;
@@ -614,6 +693,7 @@ window.addEventListener("load", () => {
     setStopMotorTestButtonState(true);
     setDownloadTestButtonState(true);
     setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
+    setMotorTestDirectionState(motorTestDirectionUpdatePending);
   };
 
   const rebuildStudySelect = () => {
@@ -728,6 +808,7 @@ window.addEventListener("load", () => {
       setStopMotorTestButtonState(false);
       setDownloadTestButtonState(true);
       setMotorTestCoolingToggleState(true);
+      setMotorTestDirectionState(true);
     } else {
       lastKnownTestRunning = false;
       motorTestPending = false;
@@ -735,11 +816,14 @@ window.addEventListener("load", () => {
       setStopMotorTestButtonState(true);
       setDownloadTestButtonState(resultCount === 0);
       setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
+      setMotorTestDirectionState(motorTestDirectionUpdatePending);
     }
 
     if (ui.motorTestCoolingToggle) {
       ui.motorTestCoolingToggle.checked = Boolean(data.motor_test_cooling_enabled);
     }
+
+    setSelectedMotorTestDirection(Boolean(data.motor_test_pusher_mode) ? "pusher" : "puller");
 
     if (hasTelemetry) {
       setHealth(ui.overviewThrottleHealth, "Throttle command active");
@@ -827,7 +911,8 @@ window.addEventListener("load", () => {
     updateChart(chartContexts.testing, []);
 
     try {
-      const body = new URLSearchParams({ cmd: "motor test" });
+      const direction = getSelectedMotorTestDirection();
+      const body = new URLSearchParams({ cmd: direction === "pusher" ? "motor test pusher" : "motor test puller" });
       const response = await fetch("/api/command", {
         method: "POST",
         headers: {
@@ -847,7 +932,43 @@ window.addEventListener("load", () => {
       setMotorTestButtonState("Start test", false);
       setStopMotorTestButtonState(true);
       setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
+      setMotorTestDirectionState(motorTestDirectionUpdatePending);
       setHealth(ui.powerHealth, "Failed to start motor test", "error");
+    }
+  };
+
+  const updateMotorTestDirection = async () => {
+    if (motorTestPending || lastKnownTestRunning) {
+      return;
+    }
+
+    const direction = getSelectedMotorTestDirection();
+    motorTestDirectionUpdatePending = true;
+    setMotorTestDirectionState(true);
+
+    try {
+      const body = new URLSearchParams({
+        cmd: direction === "pusher" ? "motor test mode pusher" : "motor test mode puller"
+      });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      await pollStatus();
+    } catch (error) {
+      setSelectedMotorTestDirection(direction === "pusher" ? "puller" : "pusher");
+      setHealth(ui.powerHealth, "Failed to update thrust direction", "error");
+    } finally {
+      motorTestDirectionUpdatePending = false;
+      setMotorTestDirectionState(lastKnownTestRunning);
     }
   };
 
@@ -1112,6 +1233,10 @@ window.addEventListener("load", () => {
   if (ui.motorTestCoolingToggle) {
     ui.motorTestCoolingToggle.addEventListener("change", updateMotorTestCooling);
   }
+
+  ui.motorTestDirectionInputs.forEach((input) => {
+    input.addEventListener("change", updateMotorTestDirection);
+  });
 
   if (ui.stopMotorTestButton) {
     ui.stopMotorTestButton.addEventListener("click", stopMotorTest);

@@ -23,6 +23,10 @@ constexpr CommandHelpEntry kCommandHelpEntries[] = {
     {"motor set <0-100>", "softly ramp to target (1 s per 30%)"},
     {"motor ramp", "ramp from current throttle to 100% in 10 seconds"},
     {"motor test", "full automatic motor test and CSV output"},
+    {"motor test puller", "run motor test in puller mode"},
+    {"motor test pusher", "run motor test in pusher mode"},
+    {"motor test mode puller", "set thrust display/log mode to puller"},
+    {"motor test mode pusher", "set thrust display/log mode to pusher"},
     {"motor test cooling on", "enable 30% post-test cooldown hold"},
     {"motor test cooling off", "disable post-test cooldown hold"},
     {"motor test stop", "stop the running motor test"},
@@ -255,6 +259,26 @@ void handleCommand(String cmd) {
         return;
     }
 
+    if (cmd.equalsIgnoreCase("motor test mode puller")) {
+        if (testRunning) {
+            Serial.println("Cannot change motor test direction while a test is running");
+            return;
+        }
+        setMotorTestPusherMode(false);
+        Serial.println("Motor test direction set to puller");
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("motor test mode pusher")) {
+        if (testRunning) {
+            Serial.println("Cannot change motor test direction while a test is running");
+            return;
+        }
+        setMotorTestPusherMode(true);
+        Serial.println("Motor test direction set to pusher");
+        return;
+    }
+
     if (testRunning) {
         Serial.println("Test is running. Command ignored.");
         return;
@@ -303,6 +327,16 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("motor test")) {
         runMotorTest();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("motor test puller")) {
+        runMotorTest(false);
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("motor test pusher")) {
+        runMotorTest(true);
         return;
     }
 
