@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=16">
+  <link rel="stylesheet" href="/styles.css?v=17">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -167,6 +167,7 @@
           </div>
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
+            <span class="legend-voltage">Voltage</span>
             <span class="legend-power">Watts</span>
             <span class="legend-current">Current</span>
             <span class="legend-rpm">RPM</span>
@@ -175,14 +176,17 @@
           <div class="chart-plot" aria-hidden="true">
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="testing-chart-left-top-voltage">--</span>
                 <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-top-power">--</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-top-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="testing-chart-left-mid-voltage">--</span>
                 <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-mid-power">--</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-mid-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="testing-chart-left-bottom-voltage">0 V</span>
                 <span class="chart-scale__value chart-scale__value--power" id="testing-chart-left-bottom-power">0 W</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="testing-chart-left-bottom-rpm">0 rpm</span>
               </div>
@@ -211,6 +215,11 @@
             <div class="chart-line-layer">
               <svg class="chart-study-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path id="testing-chart-thrust-path" d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
+              </svg>
+            </div>
+            <div class="chart-line-layer">
+              <svg class="chart-study-line chart-line--voltage" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path id="testing-chart-voltage-path" d="M0,96 C12,93 24,88 40,77 S72,52 100,30"></path>
               </svg>
             </div>
             <div class="chart-line-layer">
@@ -263,6 +272,7 @@
           </div>
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
+            <span class="legend-voltage">Voltage</span>
             <span class="legend-power">Watts</span>
             <span class="legend-current">Current</span>
             <span class="legend-rpm">RPM</span>
@@ -278,6 +288,10 @@
               <label class="chart-series-picker__option" for="study-series-power">
                 <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
                 <span>Watts</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-voltage">
+                <input id="study-series-voltage" type="checkbox" name="study-series" value="voltage" checked>
+                <span>Voltage</span>
               </label>
               <label class="chart-series-picker__option" for="study-series-current">
                 <input id="study-series-current" type="checkbox" name="study-series" value="current" checked>
@@ -299,14 +313,17 @@
             </fieldset>
             <div class="chart-scale chart-scale--left">
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="study-chart-left-top-voltage">--</span>
                 <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-top-power">--</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-top-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="study-chart-left-mid-voltage">--</span>
                 <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-mid-power">--</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-mid-rpm">--</span>
               </div>
               <div class="chart-scale__tick">
+                <span class="chart-scale__value chart-scale__value--voltage" id="study-chart-left-bottom-voltage">0 V</span>
                 <span class="chart-scale__value chart-scale__value--power" id="study-chart-left-bottom-power">0 W</span>
                 <span class="chart-scale__value chart-scale__value--rpm" id="study-chart-left-bottom-rpm">0 rpm</span>
               </div>
@@ -344,6 +361,7 @@
             </fieldset>
             <span class="chart-plot__xlabel">Thrust</span>
             <div class="chart-line-layer chart-line-layer--thrust" id="study-chart-thrust-layer"></div>
+            <div class="chart-line-layer chart-line-layer--voltage" id="study-chart-voltage-layer"></div>
             <div class="chart-line-layer chart-line-layer--power" id="study-chart-power-layer"></div>
             <div class="chart-line-layer chart-line-layer--current" id="study-chart-current-layer"></div>
             <div class="chart-line-layer chart-line-layer--rpm" id="study-chart-rpm-layer"></div>
@@ -361,6 +379,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=16"></script>
+  <script src="/app.js?v=17"></script>
 </body>
 </html>

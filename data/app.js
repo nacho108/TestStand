@@ -46,10 +46,14 @@ window.addEventListener("load", () => {
   const chartContexts = {
     testing: {
       thrustPath: document.getElementById("testing-chart-thrust-path"),
+      voltagePath: document.getElementById("testing-chart-voltage-path"),
       powerPath: document.getElementById("testing-chart-power-path"),
       currentPath: document.getElementById("testing-chart-current-path"),
       rpmPath: document.getElementById("testing-chart-rpm-path"),
       tempPath: document.getElementById("testing-chart-temp-path"),
+      leftTopVoltage: document.getElementById("testing-chart-left-top-voltage"),
+      leftMidVoltage: document.getElementById("testing-chart-left-mid-voltage"),
+      leftBottomVoltage: document.getElementById("testing-chart-left-bottom-voltage"),
       leftTopPower: document.getElementById("testing-chart-left-top-power"),
       leftMidPower: document.getElementById("testing-chart-left-mid-power"),
       leftBottomPower: document.getElementById("testing-chart-left-bottom-power"),
@@ -68,10 +72,14 @@ window.addEventListener("load", () => {
     },
     study: {
       thrustLayer: document.getElementById("study-chart-thrust-layer"),
+      voltageLayer: document.getElementById("study-chart-voltage-layer"),
       powerLayer: document.getElementById("study-chart-power-layer"),
       currentLayer: document.getElementById("study-chart-current-layer"),
       rpmLayer: document.getElementById("study-chart-rpm-layer"),
       tempLayer: document.getElementById("study-chart-temp-layer"),
+      leftTopVoltage: document.getElementById("study-chart-left-top-voltage"),
+      leftMidVoltage: document.getElementById("study-chart-left-mid-voltage"),
+      leftBottomVoltage: document.getElementById("study-chart-left-bottom-voltage"),
       leftTopPower: document.getElementById("study-chart-left-top-power"),
       leftMidPower: document.getElementById("study-chart-left-mid-power"),
       leftBottomPower: document.getElementById("study-chart-left-bottom-power"),
@@ -98,6 +106,7 @@ window.addEventListener("load", () => {
       xAxisKey: "thrust_grams",
       visibleSeries: {
         thrust: true,
+        voltage: true,
         power: true,
         current: true,
         rpm: true,
@@ -246,6 +255,7 @@ window.addEventListener("load", () => {
   };
 
   const updateChartScales = (context, rows) => {
+    const voltageRange = getSeriesRange(rows, "voltage_v", { fallbackMax: 1 });
     const powerRange = getSeriesRange(rows, "power_w", { fallbackMax: 1 });
     const rpmRange = getSeriesRange(rows, "rpm", { fallbackMax: 1 });
     const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
@@ -253,6 +263,7 @@ window.addEventListener("load", () => {
     const tempRange = getSeriesRange(rows, "motor_temperature_c", { fallbackMax: 1 });
     const hideThrustScale = context.xAxisKey === "thrust_grams";
 
+    setScaleLabels(context.leftTopVoltage, context.leftMidVoltage, context.leftBottomVoltage, voltageRange.min, voltageRange.max, "V", 2);
     setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, powerRange.min, powerRange.max, "W", 0);
     setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, rpmRange.min, rpmRange.max, "rpm", 0);
     setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, thrustRange.min, thrustRange.max, "g", 0);
@@ -368,6 +379,7 @@ window.addEventListener("load", () => {
       ? getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 })
       : { min: 0, max: 100 };
     const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const voltageRange = getSeriesRange(rows, "voltage_v", { fallbackMin: 0, fallbackMax: 1 });
     const powerRange = getSeriesRange(rows, "power_w", { fallbackMin: 0, fallbackMax: 1 });
     const currentRange = getSeriesRange(rows, "current_a", { fallbackMin: 0, fallbackMax: 1 });
     const rpmRange = getSeriesRange(rows, "rpm", { fallbackMin: 0, fallbackMax: 1 });
@@ -376,6 +388,7 @@ window.addEventListener("load", () => {
     return {
       x: xRange,
       thrust: thrustRange,
+      voltage: voltageRange,
       power: powerRange,
       current: currentRange,
       rpm: rpmRange,
@@ -399,6 +412,16 @@ window.addEventListener("load", () => {
         maxY: axisBounds.thrust.max
       }));
       context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
+    }
+
+    if (context.voltagePath) {
+      context.voltagePath.setAttribute("d", buildChartPath(rows, "voltage_v", xAxisKey, {
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.voltage.min,
+        maxY: axisBounds.voltage.max
+      }));
+      context.voltagePath.parentElement.style.display = visibleSeries.voltage === false ? "none" : "";
     }
 
     if (context.powerPath) {
@@ -528,6 +551,16 @@ window.addEventListener("load", () => {
         maxY: axisBounds.thrust.max
       });
       context.thrustLayer.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
+    }
+
+    if (context.voltageLayer) {
+      context.voltageLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "voltage_v", xAxisKey, "chart-line--voltage", {
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.voltage.min,
+        maxY: axisBounds.voltage.max
+      });
+      context.voltageLayer.style.display = visibleSeries.voltage === false ? "none" : "";
     }
 
     if (context.powerLayer) {
