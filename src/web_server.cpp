@@ -49,7 +49,27 @@ int savedWifiCount = 0;
 int connectingWifiIndex = -1;
 int stationRetryCycles = 0;
 bool webUiAssetsReady = false;
-constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 250;
+constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 333;
+
+String buildStatusJson(bool includeTestResults);
+
+void broadcastLatestTelemetrySnapshot() {
+    String statusJson;
+    bool statusJsonBuilt = false;
+
+    for (AsyncWebSocketClient& wsClient : telemetrySocket.getClients()) {
+        if (wsClient.status() != WS_CONNECTED || wsClient.queueIsFull()) {
+            continue;
+        }
+
+        if (!statusJsonBuilt) {
+            statusJson = buildStatusJson(false);
+            statusJsonBuilt = true;
+        }
+
+        wsClient.text(statusJson);
+    }
+}
 
 void printSocketClientContext(const AsyncWebSocketClient* client) {
     if (client == nullptr) {
@@ -552,7 +572,10 @@ void handleWebSocketEvent(
         Serial.print("WebSocket client connected:");
         printSocketClientContext(client);
         Serial.println();
-        client->text(buildStatusJson(false));
+        client->setCloseClientOnQueueFull(false);
+        if (!client->queueIsFull()) {
+            client->text(buildStatusJson(false));
+        }
         return;
     }
 
@@ -828,7 +851,7 @@ void updateWebServer() {
 
     lastTelemetryBroadcastMs = nowMs;
     if (telemetrySocket.count() > 0) {
-        telemetrySocket.textAll(buildStatusJson(false));
+        broadcastLatestTelemetrySnapshot();
     }
 }
 
