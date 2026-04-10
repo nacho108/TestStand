@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=17">
+  <link rel="stylesheet" href="/styles.css?v=18">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -167,6 +167,7 @@
           </div>
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
+            <span class="legend-efficiency">Thrust eff</span>
             <span class="legend-voltage">Voltage</span>
             <span class="legend-power">Watts</span>
             <span class="legend-current">Current</span>
@@ -197,16 +198,19 @@
             <div class="chart-scale chart-scale--right">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="testing-chart-right-top-efficiency">--</span>
                 <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-top-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-top-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="testing-chart-right-mid-efficiency">--</span>
                 <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-mid-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-mid-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="testing-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="testing-chart-right-bottom-efficiency">0 gr/W</span>
                 <span class="chart-scale__value chart-scale__value--current" id="testing-chart-right-bottom-current">0 A</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="testing-chart-right-bottom-temp">0 C</span>
               </div>
@@ -215,6 +219,11 @@
             <div class="chart-line-layer">
               <svg class="chart-study-line chart-line--thrust" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path id="testing-chart-thrust-path" d="M0,94 C15,90 25,80 40,70 S70,40 100,18"></path>
+              </svg>
+            </div>
+            <div class="chart-line-layer">
+              <svg class="chart-study-line chart-line--efficiency" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path id="testing-chart-efficiency-path" d="M0,98 C14,94 26,86 42,70 S72,42 100,20"></path>
               </svg>
             </div>
             <div class="chart-line-layer">
@@ -272,6 +281,7 @@
           </div>
           <div class="chart-card__legend">
             <span class="legend-thrust">Thrust</span>
+            <span class="legend-efficiency">Thrust eff</span>
             <span class="legend-voltage">Voltage</span>
             <span class="legend-power">Watts</span>
             <span class="legend-current">Current</span>
@@ -284,6 +294,10 @@
               <label class="chart-series-picker__option" for="study-series-thrust">
                 <input id="study-series-thrust" type="checkbox" name="study-series" value="thrust" checked>
                 <span>Thrust</span>
+              </label>
+              <label class="chart-series-picker__option" for="study-series-efficiency">
+                <input id="study-series-efficiency" type="checkbox" name="study-series" value="efficiency" checked>
+                <span>Thrust eff</span>
               </label>
               <label class="chart-series-picker__option" for="study-series-power">
                 <input id="study-series-power" type="checkbox" name="study-series" value="power" checked>
@@ -334,16 +348,19 @@
             <div class="chart-scale chart-scale--right">
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-top-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="study-chart-right-top-efficiency">--</span>
                 <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-top-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-top-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-mid-thrust">--</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="study-chart-right-mid-efficiency">--</span>
                 <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-mid-current">--</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-mid-temp">--</span>
               </div>
               <div class="chart-scale__tick">
                 <span class="chart-scale__value chart-scale__value--thrust" id="study-chart-right-bottom-thrust">0 g</span>
+                <span class="chart-scale__value chart-scale__value--efficiency" id="study-chart-right-bottom-efficiency">0 gr/W</span>
                 <span class="chart-scale__value chart-scale__value--current" id="study-chart-right-bottom-current">0 A</span>
                 <span class="chart-scale__value chart-scale__value--temp" id="study-chart-right-bottom-temp">0 C</span>
               </div>
@@ -361,6 +378,7 @@
             </fieldset>
             <span class="chart-plot__xlabel">Thrust</span>
             <div class="chart-line-layer chart-line-layer--thrust" id="study-chart-thrust-layer"></div>
+            <div class="chart-line-layer chart-line-layer--efficiency" id="study-chart-efficiency-layer"></div>
             <div class="chart-line-layer chart-line-layer--voltage" id="study-chart-voltage-layer"></div>
             <div class="chart-line-layer chart-line-layer--power" id="study-chart-power-layer"></div>
             <div class="chart-line-layer chart-line-layer--current" id="study-chart-current-layer"></div>
@@ -379,6 +397,6 @@
     </main>
   </div>
 
-  <script src="/app.js?v=17"></script>
+  <script src="/app.js?v=18"></script>
 </body>
 </html>

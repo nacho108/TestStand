@@ -46,6 +46,7 @@ window.addEventListener("load", () => {
   const chartContexts = {
     testing: {
       thrustPath: document.getElementById("testing-chart-thrust-path"),
+      efficiencyPath: document.getElementById("testing-chart-efficiency-path"),
       voltagePath: document.getElementById("testing-chart-voltage-path"),
       powerPath: document.getElementById("testing-chart-power-path"),
       currentPath: document.getElementById("testing-chart-current-path"),
@@ -63,6 +64,9 @@ window.addEventListener("load", () => {
       rightTopThrust: document.getElementById("testing-chart-right-top-thrust"),
       rightMidThrust: document.getElementById("testing-chart-right-mid-thrust"),
       rightBottomThrust: document.getElementById("testing-chart-right-bottom-thrust"),
+      rightTopEfficiency: document.getElementById("testing-chart-right-top-efficiency"),
+      rightMidEfficiency: document.getElementById("testing-chart-right-mid-efficiency"),
+      rightBottomEfficiency: document.getElementById("testing-chart-right-bottom-efficiency"),
       rightTopCurrent: document.getElementById("testing-chart-right-top-current"),
       rightMidCurrent: document.getElementById("testing-chart-right-mid-current"),
       rightBottomCurrent: document.getElementById("testing-chart-right-bottom-current"),
@@ -72,6 +76,7 @@ window.addEventListener("load", () => {
     },
     study: {
       thrustLayer: document.getElementById("study-chart-thrust-layer"),
+      efficiencyLayer: document.getElementById("study-chart-efficiency-layer"),
       voltageLayer: document.getElementById("study-chart-voltage-layer"),
       powerLayer: document.getElementById("study-chart-power-layer"),
       currentLayer: document.getElementById("study-chart-current-layer"),
@@ -89,6 +94,9 @@ window.addEventListener("load", () => {
       rightTopThrust: document.getElementById("study-chart-right-top-thrust"),
       rightMidThrust: document.getElementById("study-chart-right-mid-thrust"),
       rightBottomThrust: document.getElementById("study-chart-right-bottom-thrust"),
+      rightTopEfficiency: document.getElementById("study-chart-right-top-efficiency"),
+      rightMidEfficiency: document.getElementById("study-chart-right-mid-efficiency"),
+      rightBottomEfficiency: document.getElementById("study-chart-right-bottom-efficiency"),
       rightTopCurrent: document.getElementById("study-chart-right-top-current"),
       rightMidCurrent: document.getElementById("study-chart-right-mid-current"),
       rightBottomCurrent: document.getElementById("study-chart-right-bottom-current"),
@@ -106,6 +114,7 @@ window.addEventListener("load", () => {
       xAxisKey: "thrust_grams",
       visibleSeries: {
         thrust: true,
+        efficiency: true,
         voltage: true,
         power: true,
         current: true,
@@ -134,6 +143,25 @@ window.addEventListener("load", () => {
   let cachedTestResultCount = 0;
   let savedTestFiles = [];
   let studyDatasets = [];
+
+  const calculateThrustEfficiency = (thrustGrams, powerWatts) => {
+    const thrust = Number(thrustGrams);
+    const power = Number(powerWatts);
+    if (!Number.isFinite(thrust) || !Number.isFinite(power) || Math.abs(power) < 1e-6) {
+      return Number.NaN;
+    }
+
+    return thrust / power;
+  };
+
+  const normalizeChartRow = (row) => ({
+    ...row,
+    thrust_efficiency_g_per_w: calculateThrustEfficiency(row?.thrust_grams, row?.power_w)
+  });
+
+  const normalizeChartRows = (rows) => Array.isArray(rows)
+    ? rows.map((row) => normalizeChartRow(row))
+    : [];
 
   const setText = (element, value) => {
     if (element) {
@@ -259,6 +287,7 @@ window.addEventListener("load", () => {
     const powerRange = getSeriesRange(rows, "power_w", { fallbackMax: 1 });
     const rpmRange = getSeriesRange(rows, "rpm", { fallbackMax: 1 });
     const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const efficiencyRange = getSeriesRange(rows, "thrust_efficiency_g_per_w", { fallbackMin: 0, fallbackMax: 1 });
     const currentRange = getSeriesRange(rows, "current_a", { fallbackMax: 1 });
     const tempRange = getSeriesRange(rows, "motor_temperature_c", { fallbackMax: 1 });
     const hideThrustScale = context.xAxisKey === "thrust_grams";
@@ -267,6 +296,7 @@ window.addEventListener("load", () => {
     setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, powerRange.min, powerRange.max, "W", 0);
     setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, rpmRange.min, rpmRange.max, "rpm", 0);
     setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, thrustRange.min, thrustRange.max, "g", 0);
+    setScaleLabels(context.rightTopEfficiency, context.rightMidEfficiency, context.rightBottomEfficiency, efficiencyRange.min, efficiencyRange.max, "gr/W", 2);
     setScaleLabels(context.rightTopCurrent, context.rightMidCurrent, context.rightBottomCurrent, currentRange.min, currentRange.max, "A", 2);
     setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, tempRange.min, tempRange.max, "C", 1);
 
@@ -379,6 +409,7 @@ window.addEventListener("load", () => {
       ? getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 })
       : { min: 0, max: 100 };
     const thrustRange = getSeriesRange(rows, "thrust_grams", { fallbackMin: 0, fallbackMax: 1 });
+    const efficiencyRange = getSeriesRange(rows, "thrust_efficiency_g_per_w", { fallbackMin: 0, fallbackMax: 1 });
     const voltageRange = getSeriesRange(rows, "voltage_v", { fallbackMin: 0, fallbackMax: 1 });
     const powerRange = getSeriesRange(rows, "power_w", { fallbackMin: 0, fallbackMax: 1 });
     const currentRange = getSeriesRange(rows, "current_a", { fallbackMin: 0, fallbackMax: 1 });
@@ -388,6 +419,7 @@ window.addEventListener("load", () => {
     return {
       x: xRange,
       thrust: thrustRange,
+      efficiency: efficiencyRange,
       voltage: voltageRange,
       power: powerRange,
       current: currentRange,
@@ -412,6 +444,16 @@ window.addEventListener("load", () => {
         maxY: axisBounds.thrust.max
       }));
       context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
+    }
+
+    if (context.efficiencyPath) {
+      context.efficiencyPath.setAttribute("d", buildChartPath(rows, "thrust_efficiency_g_per_w", xAxisKey, {
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.efficiency.min,
+        maxY: axisBounds.efficiency.max
+      }));
+      context.efficiencyPath.parentElement.style.display = visibleSeries.efficiency === false ? "none" : "";
     }
 
     if (context.voltagePath) {
@@ -553,6 +595,16 @@ window.addEventListener("load", () => {
       context.thrustLayer.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
+    if (context.efficiencyLayer) {
+      context.efficiencyLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_efficiency_g_per_w", xAxisKey, "chart-line--efficiency", {
+        minX: axisBounds.x.min,
+        maxX: axisBounds.x.max,
+        minY: axisBounds.efficiency.min,
+        maxY: axisBounds.efficiency.max
+      });
+      context.efficiencyLayer.style.display = visibleSeries.efficiency === false ? "none" : "";
+    }
+
     if (context.voltageLayer) {
       context.voltageLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "voltage_v", xAxisKey, "chart-line--voltage", {
         minX: axisBounds.x.min,
@@ -622,7 +674,7 @@ window.addEventListener("load", () => {
       return [];
     }
 
-    return lines.slice(1)
+    return normalizeChartRows(lines.slice(1)
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
       .map((line) => {
@@ -637,7 +689,7 @@ window.addEventListener("load", () => {
           motor_temperature_c: parseCsvNumber(cells[6]),
           thrust_grams: parseCsvNumber(cells[7])
         };
-      });
+      }));
   };
 
   const setStudyStatus = (text) => {
@@ -817,7 +869,7 @@ window.addEventListener("load", () => {
     const hasInlineResults = Array.isArray(data.test_results);
 
     if (hasInlineResults) {
-      cachedTestResults = data.test_results;
+      cachedTestResults = normalizeChartRows(data.test_results);
       cachedTestResultCount = resultCount;
     }
 

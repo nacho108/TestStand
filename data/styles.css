@@ -483,6 +483,7 @@ body::before {
 }
 
 .legend-thrust::before { background: #244d74; }
+.legend-efficiency::before { background: #b06a00; }
 .legend-voltage::before { background: #8a4fff; }
 .legend-power::before { background: #546fe5; }
 .legend-current::before { background: #1aa36f; }
@@ -608,6 +609,7 @@ body::before {
 }
 
 .chart-line--thrust { stroke: #244d74; }
+.chart-line--efficiency { stroke: #b06a00; }
 .chart-line--voltage { stroke: #8a4fff; }
 .chart-line--power { stroke: #546fe5; }
 .chart-line--current { stroke: #1aa36f; }
@@ -660,6 +662,7 @@ body::before {
 }
 
 .chart-scale__value--thrust { color: #244d74; }
+.chart-scale__value--efficiency { color: #b06a00; }
 .chart-scale__value--voltage { color: #8a4fff; }
 .chart-scale__value--power { color: #546fe5; }
 .chart-scale__value--current { color: #1aa36f; }
