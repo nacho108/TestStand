@@ -1040,7 +1040,7 @@ window.addEventListener("load", () => {
     }
 
     pollStatus();
-    pollTimer = window.setInterval(pollStatus, 1000);
+    pollTimer = window.setInterval(pollStatus, 250);
   };
 
   const runMotorTest = async () => {

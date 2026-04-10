@@ -49,7 +49,7 @@ int savedWifiCount = 0;
 int connectingWifiIndex = -1;
 int stationRetryCycles = 0;
 bool webUiAssetsReady = false;
-constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 500;
+constexpr unsigned long TELEMETRY_BROADCAST_INTERVAL_MS = 250;
 
 void printSocketClientContext(const AsyncWebSocketClient* client) {
     if (client == nullptr) {
