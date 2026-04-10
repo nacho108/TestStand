@@ -24,6 +24,7 @@ constexpr int AVAILABLE_LED_PIN = LED_BUILTIN;
 
 bool availableLedState = false;
 unsigned long lastAvailableLedToggle = 0;
+bool startupConsoleReady = false;
 
 void holdEscSignalLowAtBoot() {
     pinMode(ESC_PWM_PIN, OUTPUT);
@@ -104,24 +105,41 @@ void setup() {
         Serial.println("WARNING: LittleFS test storage init failed.");
     }
 
-    Serial.println("Ready.");
-    printHelp();
-    printCalibrationStatus();
-    printMotorPoleCount();
-    showPrompt();
+    if (isScaleStartupSequenceComplete()) {
+        Serial.println("Ready.");
+        printHelp();
+        printCalibrationStatus();
+        printMotorPoleCount();
+        showPrompt();
+        startupConsoleReady = true;
+    } else {
+        Serial.println("Waiting for scale startup sequence to finish before enabling CLI.");
+    }
 }
 
 void loop() {
-    readConsole();
-    processQueuedWebCommand();
     updateRamp();
     pollEscTelemetry();
     pollScale();
     updateWebServer();
     updateAvailableLed();
 
+    if (!startupConsoleReady && isScaleStartupSequenceComplete()) {
+        Serial.println("Ready.");
+        printHelp();
+        printCalibrationStatus();
+        printMotorPoleCount();
+        showPrompt();
+        startupConsoleReady = true;
+    }
+
+    if (startupConsoleReady) {
+        readConsole();
+        processQueuedWebCommand();
+    }
+
     static unsigned long lastPrint = 0;
-    if (!testRunning && telemetryStreaming && millis() - lastPrint >= 1000) {
+    if (startupConsoleReady && !testRunning && telemetryStreaming && millis() - lastPrint >= 1000) {
         lastPrint = millis();
 
         Serial.println();

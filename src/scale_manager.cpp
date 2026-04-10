@@ -28,6 +28,8 @@ bool startupAutoTarePending = false;
 bool startupAutoTareCompleted = false;
 unsigned long lastScaleRecoveryAttemptMs = 0;
 bool scaleHasSeenSamplesSinceInit = false;
+bool startupAutoTareAnnounced = false;
+unsigned long lastStartupAutoTareProgressMs = 0;
 
 void clearScaleWindow() {
     scaleWindowHead = 0;
@@ -192,6 +194,8 @@ void beginScaleManager() {
         updateSimulation();
         startupAutoTarePending = false;
         startupAutoTareCompleted = true;
+        startupAutoTareAnnounced = false;
+        lastStartupAutoTareProgressMs = 0;
         return;
     }
 
@@ -199,10 +203,15 @@ void beginScaleManager() {
     if (!configureScaleHardware()) {
         startupAutoTarePending = false;
         startupAutoTareCompleted = false;
+        startupAutoTareAnnounced = false;
+        lastStartupAutoTareProgressMs = 0;
         return;
     }
     startupAutoTarePending = true;
     startupAutoTareCompleted = false;
+    startupAutoTareAnnounced = false;
+    lastStartupAutoTareProgressMs = 0;
+    Serial.println("Scale startup auto-tare armed. Waiting for stable readings...");
 }
 
 void pollScale() {
@@ -226,8 +235,29 @@ void pollScale() {
         return;
     }
 
+    if (!startupAutoTareAnnounced && lastScaleSampleValid) {
+        startupAutoTareAnnounced = true;
+        Serial.print("Scale startup auto-tare monitoring ");
+        Serial.print(lastScaleWindowSampleCount);
+        Serial.println(" samples for stability.");
+    }
+
     if (!lastScaleSampleValid) {
         return;
+    }
+
+    if (lastStartupAutoTareProgressMs == 0 ||
+        nowMs - lastStartupAutoTareProgressMs >= 1000) {
+        lastStartupAutoTareProgressMs = nowMs;
+        Serial.print("Scale startup auto-tare waiting: samples=");
+        Serial.print(lastScaleWindowSampleCount);
+        Serial.print("/");
+        Serial.print(SCALE_STARTUP_STABLE_MIN_SAMPLES);
+        Serial.print(", stddev=");
+        Serial.print(lastScaleStdDev, 3);
+        Serial.print(" g, limit=");
+        Serial.print(SCALE_STARTUP_STABLE_STDDEV_G, 3);
+        Serial.println(" g");
     }
 
     if (lastScaleWindowSampleCount < SCALE_STARTUP_STABLE_MIN_SAMPLES) {
@@ -242,7 +272,26 @@ void pollScale() {
     if (tareScale()) {
         startupAutoTarePending = false;
         startupAutoTareCompleted = true;
+        lastStartupAutoTareProgressMs = 0;
+    } else {
+        Serial.println("Scale startup auto-tare failed. It will keep waiting for stable readings.");
     }
+}
+
+bool isScaleStartupSequenceComplete() {
+    if (simulationEnabled()) {
+        return true;
+    }
+
+    if (!scaleDetected) {
+        return true;
+    }
+
+    if (!startupAutoTarePending) {
+        return true;
+    }
+
+    return startupAutoTareCompleted;
 }
 
 bool parseScaleCalibrationCommand(const String& cmd, float& outValue) {

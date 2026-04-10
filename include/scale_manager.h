@@ -4,6 +4,7 @@
 
 void beginScaleManager();
 void pollScale();
+bool isScaleStartupSequenceComplete();
 bool parseScaleCalibrationCommand(const String& cmd, float& outValue);
 bool parseScaleFactorCommand(const String& cmd, float& outValue);
 void saveScaleCalibration();
