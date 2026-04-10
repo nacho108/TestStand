@@ -52,27 +52,55 @@ window.addEventListener("load", () => {
       currentPath: document.getElementById("testing-chart-current-path"),
       rpmPath: document.getElementById("testing-chart-rpm-path"),
       tempPath: document.getElementById("testing-chart-temp-path"),
-      leftTopVoltage: document.getElementById("testing-chart-left-top-voltage"),
-      leftMidVoltage: document.getElementById("testing-chart-left-mid-voltage"),
-      leftBottomVoltage: document.getElementById("testing-chart-left-bottom-voltage"),
-      leftTopPower: document.getElementById("testing-chart-left-top-power"),
-      leftMidPower: document.getElementById("testing-chart-left-mid-power"),
-      leftBottomPower: document.getElementById("testing-chart-left-bottom-power"),
-      leftTopRpm: document.getElementById("testing-chart-left-top-rpm"),
-      leftMidRpm: document.getElementById("testing-chart-left-mid-rpm"),
-      leftBottomRpm: document.getElementById("testing-chart-left-bottom-rpm"),
-      rightTopThrust: document.getElementById("testing-chart-right-top-thrust"),
-      rightMidThrust: document.getElementById("testing-chart-right-mid-thrust"),
-      rightBottomThrust: document.getElementById("testing-chart-right-bottom-thrust"),
-      rightTopEfficiency: document.getElementById("testing-chart-right-top-efficiency"),
-      rightMidEfficiency: document.getElementById("testing-chart-right-mid-efficiency"),
-      rightBottomEfficiency: document.getElementById("testing-chart-right-bottom-efficiency"),
-      rightTopCurrent: document.getElementById("testing-chart-right-top-current"),
-      rightMidCurrent: document.getElementById("testing-chart-right-mid-current"),
-      rightBottomCurrent: document.getElementById("testing-chart-right-bottom-current"),
-      rightTopTemp: document.getElementById("testing-chart-right-top-temp"),
-      rightMidTemp: document.getElementById("testing-chart-right-mid-temp"),
-      rightBottomTemp: document.getElementById("testing-chart-right-bottom-temp")
+      leftVoltageTicks: [
+        document.getElementById("testing-chart-left-top-voltage"),
+        document.getElementById("testing-chart-left-upper-mid-voltage"),
+        document.getElementById("testing-chart-left-mid-voltage"),
+        document.getElementById("testing-chart-left-lower-mid-voltage"),
+        document.getElementById("testing-chart-left-bottom-voltage")
+      ],
+      leftPowerTicks: [
+        document.getElementById("testing-chart-left-top-power"),
+        document.getElementById("testing-chart-left-upper-mid-power"),
+        document.getElementById("testing-chart-left-mid-power"),
+        document.getElementById("testing-chart-left-lower-mid-power"),
+        document.getElementById("testing-chart-left-bottom-power")
+      ],
+      leftRpmTicks: [
+        document.getElementById("testing-chart-left-top-rpm"),
+        document.getElementById("testing-chart-left-upper-mid-rpm"),
+        document.getElementById("testing-chart-left-mid-rpm"),
+        document.getElementById("testing-chart-left-lower-mid-rpm"),
+        document.getElementById("testing-chart-left-bottom-rpm")
+      ],
+      rightThrustTicks: [
+        document.getElementById("testing-chart-right-top-thrust"),
+        document.getElementById("testing-chart-right-upper-mid-thrust"),
+        document.getElementById("testing-chart-right-mid-thrust"),
+        document.getElementById("testing-chart-right-lower-mid-thrust"),
+        document.getElementById("testing-chart-right-bottom-thrust")
+      ],
+      rightEfficiencyTicks: [
+        document.getElementById("testing-chart-right-top-efficiency"),
+        document.getElementById("testing-chart-right-upper-mid-efficiency"),
+        document.getElementById("testing-chart-right-mid-efficiency"),
+        document.getElementById("testing-chart-right-lower-mid-efficiency"),
+        document.getElementById("testing-chart-right-bottom-efficiency")
+      ],
+      rightCurrentTicks: [
+        document.getElementById("testing-chart-right-top-current"),
+        document.getElementById("testing-chart-right-upper-mid-current"),
+        document.getElementById("testing-chart-right-mid-current"),
+        document.getElementById("testing-chart-right-lower-mid-current"),
+        document.getElementById("testing-chart-right-bottom-current")
+      ],
+      rightTempTicks: [
+        document.getElementById("testing-chart-right-top-temp"),
+        document.getElementById("testing-chart-right-upper-mid-temp"),
+        document.getElementById("testing-chart-right-mid-temp"),
+        document.getElementById("testing-chart-right-lower-mid-temp"),
+        document.getElementById("testing-chart-right-bottom-temp")
+      ]
     },
     study: {
       thrustLayer: document.getElementById("study-chart-thrust-layer"),
@@ -82,34 +110,66 @@ window.addEventListener("load", () => {
       currentLayer: document.getElementById("study-chart-current-layer"),
       rpmLayer: document.getElementById("study-chart-rpm-layer"),
       tempLayer: document.getElementById("study-chart-temp-layer"),
-      leftTopVoltage: document.getElementById("study-chart-left-top-voltage"),
-      leftMidVoltage: document.getElementById("study-chart-left-mid-voltage"),
-      leftBottomVoltage: document.getElementById("study-chart-left-bottom-voltage"),
-      leftTopPower: document.getElementById("study-chart-left-top-power"),
-      leftMidPower: document.getElementById("study-chart-left-mid-power"),
-      leftBottomPower: document.getElementById("study-chart-left-bottom-power"),
-      leftTopRpm: document.getElementById("study-chart-left-top-rpm"),
-      leftMidRpm: document.getElementById("study-chart-left-mid-rpm"),
-      leftBottomRpm: document.getElementById("study-chart-left-bottom-rpm"),
-      rightTopThrust: document.getElementById("study-chart-right-top-thrust"),
-      rightMidThrust: document.getElementById("study-chart-right-mid-thrust"),
-      rightBottomThrust: document.getElementById("study-chart-right-bottom-thrust"),
-      rightTopEfficiency: document.getElementById("study-chart-right-top-efficiency"),
-      rightMidEfficiency: document.getElementById("study-chart-right-mid-efficiency"),
-      rightBottomEfficiency: document.getElementById("study-chart-right-bottom-efficiency"),
-      rightTopCurrent: document.getElementById("study-chart-right-top-current"),
-      rightMidCurrent: document.getElementById("study-chart-right-mid-current"),
-      rightBottomCurrent: document.getElementById("study-chart-right-bottom-current"),
-      rightTopTemp: document.getElementById("study-chart-right-top-temp"),
-      rightMidTemp: document.getElementById("study-chart-right-mid-temp"),
-      rightBottomTemp: document.getElementById("study-chart-right-bottom-temp"),
+      leftVoltageTicks: [
+        document.getElementById("study-chart-left-top-voltage"),
+        document.getElementById("study-chart-left-upper-mid-voltage"),
+        document.getElementById("study-chart-left-mid-voltage"),
+        document.getElementById("study-chart-left-lower-mid-voltage"),
+        document.getElementById("study-chart-left-bottom-voltage")
+      ],
+      leftPowerTicks: [
+        document.getElementById("study-chart-left-top-power"),
+        document.getElementById("study-chart-left-upper-mid-power"),
+        document.getElementById("study-chart-left-mid-power"),
+        document.getElementById("study-chart-left-lower-mid-power"),
+        document.getElementById("study-chart-left-bottom-power")
+      ],
+      leftRpmTicks: [
+        document.getElementById("study-chart-left-top-rpm"),
+        document.getElementById("study-chart-left-upper-mid-rpm"),
+        document.getElementById("study-chart-left-mid-rpm"),
+        document.getElementById("study-chart-left-lower-mid-rpm"),
+        document.getElementById("study-chart-left-bottom-rpm")
+      ],
+      rightThrustTicks: [
+        document.getElementById("study-chart-right-top-thrust"),
+        document.getElementById("study-chart-right-upper-mid-thrust"),
+        document.getElementById("study-chart-right-mid-thrust"),
+        document.getElementById("study-chart-right-lower-mid-thrust"),
+        document.getElementById("study-chart-right-bottom-thrust")
+      ],
+      rightEfficiencyTicks: [
+        document.getElementById("study-chart-right-top-efficiency"),
+        document.getElementById("study-chart-right-upper-mid-efficiency"),
+        document.getElementById("study-chart-right-mid-efficiency"),
+        document.getElementById("study-chart-right-lower-mid-efficiency"),
+        document.getElementById("study-chart-right-bottom-efficiency")
+      ],
+      rightCurrentTicks: [
+        document.getElementById("study-chart-right-top-current"),
+        document.getElementById("study-chart-right-upper-mid-current"),
+        document.getElementById("study-chart-right-mid-current"),
+        document.getElementById("study-chart-right-lower-mid-current"),
+        document.getElementById("study-chart-right-bottom-current")
+      ],
+      rightTempTicks: [
+        document.getElementById("study-chart-right-top-temp"),
+        document.getElementById("study-chart-right-upper-mid-temp"),
+        document.getElementById("study-chart-right-mid-temp"),
+        document.getElementById("study-chart-right-lower-mid-temp"),
+        document.getElementById("study-chart-right-bottom-temp")
+      ],
       xLabel: document.querySelector('[data-view-pane="study"] .chart-plot__xlabel'),
       xTicks: [
         document.getElementById("study-chart-tick-0"),
         document.getElementById("study-chart-tick-1"),
         document.getElementById("study-chart-tick-2"),
         document.getElementById("study-chart-tick-3"),
-        document.getElementById("study-chart-tick-4")
+        document.getElementById("study-chart-tick-4"),
+        document.getElementById("study-chart-tick-5"),
+        document.getElementById("study-chart-tick-6"),
+        document.getElementById("study-chart-tick-7"),
+        document.getElementById("study-chart-tick-8")
       ],
       xAxisKey: "thrust_grams",
       visibleSeries: {
@@ -207,12 +267,14 @@ window.addEventListener("load", () => {
     return `${Number(value).toFixed(digits)} ${unit}`;
   };
 
-  const setScaleLabels = (topElement, midElement, bottomElement, minValue, maxValue, unit, digits = 0) => {
+  const setScaleLabels = (elements, minValue, maxValue, unit, digits = 0) => {
     const safeMin = Number.isFinite(minValue) ? minValue : 0;
     const safeMax = Number.isFinite(maxValue) ? maxValue : 0;
-    setText(topElement, formatScaleValue(safeMax, unit, digits));
-    setText(midElement, formatScaleValue((safeMin + safeMax) / 2, unit, digits));
-    setText(bottomElement, formatScaleValue(safeMin, unit, digits));
+    const ticks = Array.isArray(elements) ? elements : [];
+    ticks.forEach((element, index) => {
+      const ratio = ticks.length <= 1 ? 0 : 1 - (index / (ticks.length - 1));
+      setText(element, formatScaleValue(safeMin + (safeMax - safeMin) * ratio, unit, digits));
+    });
   };
 
   const formatAxisTick = (value, unit = "", digits = 0) => {
@@ -292,15 +354,15 @@ window.addEventListener("load", () => {
     const tempRange = getSeriesRange(rows, "motor_temperature_c", { fallbackMax: 1 });
     const hideThrustScale = context.xAxisKey === "thrust_grams";
 
-    setScaleLabels(context.leftTopVoltage, context.leftMidVoltage, context.leftBottomVoltage, voltageRange.min, voltageRange.max, "V", 2);
-    setScaleLabels(context.leftTopPower, context.leftMidPower, context.leftBottomPower, powerRange.min, powerRange.max, "W", 0);
-    setScaleLabels(context.leftTopRpm, context.leftMidRpm, context.leftBottomRpm, rpmRange.min, rpmRange.max, "rpm", 0);
-    setScaleLabels(context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust, thrustRange.min, thrustRange.max, "g", 0);
-    setScaleLabels(context.rightTopEfficiency, context.rightMidEfficiency, context.rightBottomEfficiency, efficiencyRange.min, efficiencyRange.max, "gr/W", 2);
-    setScaleLabels(context.rightTopCurrent, context.rightMidCurrent, context.rightBottomCurrent, currentRange.min, currentRange.max, "A", 2);
-    setScaleLabels(context.rightTopTemp, context.rightMidTemp, context.rightBottomTemp, tempRange.min, tempRange.max, "C", 1);
+    setScaleLabels(context.leftVoltageTicks, voltageRange.min, voltageRange.max, "V", 2);
+    setScaleLabels(context.leftPowerTicks, powerRange.min, powerRange.max, "W", 0);
+    setScaleLabels(context.leftRpmTicks, rpmRange.min, rpmRange.max, "rpm", 0);
+    setScaleLabels(context.rightThrustTicks, thrustRange.min, thrustRange.max, "g", 0);
+    setScaleLabels(context.rightEfficiencyTicks, efficiencyRange.min, efficiencyRange.max, "gr/W", 2);
+    setScaleLabels(context.rightCurrentTicks, currentRange.min, currentRange.max, "A", 2);
+    setScaleLabels(context.rightTempTicks, tempRange.min, tempRange.max, "C", 1);
 
-    [context.rightTopThrust, context.rightMidThrust, context.rightBottomThrust].forEach((element) => {
+    context.rightThrustTicks.forEach((element) => {
       if (element) {
         element.style.display = hideThrustScale ? "none" : "";
       }
