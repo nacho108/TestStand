@@ -516,6 +516,15 @@ body::before {
   right: 204px;
 }
 
+.chart-plot--study .chart-plot__axis--top {
+  left: 332px;
+  right: 204px;
+}
+
+.chart-plot--study .chart-plot__axis--right {
+  right: 204px;
+}
+
 .chart-plot--study .chart-line,
 .chart-plot--study .chart-line-layer {
   inset: 18px 204px 36px 332px;
@@ -559,6 +568,20 @@ body::before {
   right: 92px;
   bottom: 36px;
   height: 1px;
+}
+
+.chart-plot__axis--top {
+  left: 92px;
+  right: 92px;
+  top: 18px;
+  height: 1px;
+}
+
+.chart-plot__axis--right {
+  right: 92px;
+  top: 18px;
+  bottom: 36px;
+  width: 1px;
 }
 
 .chart-plot__xlabel {
