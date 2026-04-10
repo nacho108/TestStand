@@ -37,6 +37,8 @@ RampState ramp;
 EscTelemetry lastTlm;
 LinearCalibration voltageCal;
 LinearCalibration currentCal;
+SafetyConfiguration safetyConfig;
+SafetyStatus safetyStatus;
 SimulatedSensorValues simulatedSensors;
 
 TestResultRow testResults[TEST_MAX_RESULTS];

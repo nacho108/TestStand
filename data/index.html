@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=23">
+  <link rel="stylesheet" href="/styles.css?v=24">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -567,10 +567,74 @@
             </label>
           </div>
         </article>
+
+        <article class="group-card group-card--configuration">
+          <div class="group-card__header">
+            <h2>Safety</h2>
+          </div>
+
+          <div class="overview-motor-controls">
+            <p class="config-note">HI shows a warning in the UI. HIHI stops the motor or active test.</p>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-current-hi-button" type="button">Set current HI</button>
+              <label class="overview-motor-controls__field" for="config-safety-current-hi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-current-hi-value" type="number" min="0" step="0.001" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">A</span>
+                </div>
+              </label>
+            </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-current-hihi-button" type="button">Set current HIHI</button>
+              <label class="overview-motor-controls__field" for="config-safety-current-hihi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-current-hihi-value" type="number" min="0" step="0.001" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">A</span>
+                </div>
+              </label>
+            </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-motor-temp-hi-button" type="button">Set motor temp HI</button>
+              <label class="overview-motor-controls__field" for="config-safety-motor-temp-hi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-motor-temp-hi-value" type="number" min="0" step="0.1" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">C</span>
+                </div>
+              </label>
+            </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-motor-temp-hihi-button" type="button">Set motor temp HIHI</button>
+              <label class="overview-motor-controls__field" for="config-safety-motor-temp-hihi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-motor-temp-hihi-value" type="number" min="0" step="0.1" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">C</span>
+                </div>
+              </label>
+            </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-esc-temp-hi-button" type="button">Set ESC temp HI</button>
+              <label class="overview-motor-controls__field" for="config-safety-esc-temp-hi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-esc-temp-hi-value" type="number" min="0" step="0.1" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">C</span>
+                </div>
+              </label>
+            </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-safety-esc-temp-hihi-button" type="button">Set ESC temp HIHI</button>
+              <label class="overview-motor-controls__field" for="config-safety-esc-temp-hihi-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-safety-esc-temp-hihi-value" type="number" min="0" step="0.1" placeholder="Disabled">
+                  <span class="overview-motor-controls__unit">C</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </article>
       </section>
     </main>
   </div>
 
-  <script src="/app.js?v=23"></script>
+  <script src="/app.js?v=24"></script>
 </body>
 </html>

@@ -32,6 +32,32 @@ struct LinearCalibration {
     float highReal = 0.0f;
 };
 
+struct SafetyThresholdPair {
+    float hi = -1.0f;
+    float hihi = -1.0f;
+};
+
+struct SafetyConfiguration {
+    SafetyThresholdPair currentA;
+    SafetyThresholdPair motorTemperatureC;
+    SafetyThresholdPair escTemperatureC;
+};
+
+enum class SafetyLevel : uint8_t {
+    Unknown = 0,
+    Normal,
+    Hi,
+    HiHi
+};
+
+struct SafetyStatus {
+    SafetyLevel currentLevel = SafetyLevel::Unknown;
+    SafetyLevel motorTemperatureLevel = SafetyLevel::Unknown;
+    SafetyLevel escTemperatureLevel = SafetyLevel::Unknown;
+    bool tripActive = false;
+    String tripReason;
+};
+
 struct TestResultRow {
     int throttlePercent = 0;
     float voltageV = 0.0f;

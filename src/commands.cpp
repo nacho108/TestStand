@@ -6,6 +6,7 @@
 #include "ir_manager.h"
 #include "motor_control.h"
 #include "scale_manager.h"
+#include "safety_manager.h"
 #include "test_runner.h"
 #include "web_server.h"
 
@@ -54,6 +55,13 @@ constexpr CommandHelpEntry kCommandHelpEntries[] = {
     {"calibrate current high <A>", ""},
     {"calibrate voltage low <V>", ""},
     {"calibrate voltage high <V>", ""},
+    {"set current hi <A>", "warn when current reaches HI"},
+    {"set current hihi <A>", "stop motor/test when current reaches HIHI"},
+    {"set motor temp hi <C>", "warn when motor temperature reaches HI"},
+    {"set motor temp hihi <C>", "stop motor/test when motor temperature reaches HIHI"},
+    {"set esc temp hi <C>", "warn when ESC temperature reaches HI"},
+    {"set esc temp hihi <C>", "stop motor/test when ESC temperature reaches HIHI"},
+    {"safety show", "print current safety thresholds"},
     {"calibration show", ""},
     {"calibration reset", ""},
     {"ir status", "print MLX90614 status"},
@@ -469,6 +477,12 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("calibration show")) {
         printCalibrationStatus();
+        printSafetyConfiguration();
+        return;
+    }
+
+    if (cmd.equalsIgnoreCase("safety show")) {
+        printSafetyConfiguration();
         return;
     }
 
@@ -496,6 +510,36 @@ void handleCommand(String cmd) {
 
     if (parseCalibrationCommand(cmd, "calibrate voltage high ", calValue)) {
         captureVoltageHigh(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set current hi ", calValue)) {
+        setCurrentHiThreshold(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set current hihi ", calValue)) {
+        setCurrentHiHiThreshold(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set motor temp hi ", calValue)) {
+        setMotorTempHiThreshold(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set motor temp hihi ", calValue)) {
+        setMotorTempHiHiThreshold(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set esc temp hi ", calValue)) {
+        setEscTempHiThreshold(calValue);
+        return;
+    }
+
+    if (parseCalibrationCommand(cmd, "set esc temp hihi ", calValue)) {
+        setEscTempHiHiThreshold(calValue);
         return;
     }
 

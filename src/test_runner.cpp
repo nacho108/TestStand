@@ -10,6 +10,7 @@
 #include "ir_manager.h"
 #include "motor_control.h"
 #include "scale_manager.h"
+#include "safety_manager.h"
 #include "web_server.h"
 
 namespace {
@@ -24,6 +25,7 @@ void serviceTestLoop() {
     processQueuedWebCommand();
     pollEscTelemetry();
     pollScale();
+    updateSafetyStatus();
     updateRamp();
     updateWebServer();
 }
@@ -105,6 +107,12 @@ bool shouldAbortMotorTest() {
     }
 
     if (!consumeMotorTestStopRequest()) {
+        String safetyReason;
+        if (consumeSafetyMotorTestStopRequest(safetyReason)) {
+            Serial.print("Motor test stopped by safety: ");
+            Serial.println(safetyReason);
+            return true;
+        }
         return false;
     }
 
@@ -550,6 +558,7 @@ bool runMotorTest(bool pusherMode) {
                 scaleSampleCount++;
             }
 
+            updateSafetyStatus();
             updateWebServer();
             updateRamp();
             delay(5);

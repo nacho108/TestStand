@@ -15,6 +15,7 @@
 #include "esc_telemetry.h"
 #include "ir_manager.h"
 #include "scale_manager.h"
+#include "safety_manager.h"
 #include "app_config.h"
 #include "test_runner.h"
 
@@ -468,6 +469,37 @@ void appendJsonFloat(String& json, const char* key, float value, int decimals, b
     }
 }
 
+void appendJsonString(String& json, const char* key, const String& value, bool withComma = true) {
+    json += "\"";
+    json += key;
+    json += "\":\"";
+    for (size_t i = 0; i < value.length(); ++i) {
+        const char c = value.charAt(i);
+        if (c == '\\' || c == '"') {
+            json += "\\";
+        }
+        json += c;
+    }
+    json += "\"";
+    if (withComma) {
+        json += ",";
+    }
+}
+
+const char* safetyLevelToString(SafetyLevel level) {
+    switch (level) {
+        case SafetyLevel::Normal:
+            return "normal";
+        case SafetyLevel::Hi:
+            return "hi";
+        case SafetyLevel::HiHi:
+            return "hihi";
+        case SafetyLevel::Unknown:
+        default:
+            return "unknown";
+    }
+}
+
 void appendJsonTestResults(String& json, bool withComma = true) {
     json += "\"test_results\":[";
 
@@ -498,6 +530,8 @@ void appendJsonTestResults(String& json, bool withComma = true) {
 }
 
 String buildStatusJson(bool includeTestResults = true) {
+    loadSafetyConfiguration();
+
     float irAmbient = lastIrAmbientC;
     float irObject = lastIrObjectC;
 
@@ -549,6 +583,17 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonBool(json, "motor_test_pusher_mode", isMotorTestPusherMode());
     appendJsonUnsigned(json, "motor_poles", (unsigned long)motorPoleCount);
     appendJsonFloat(json, "scale_calibration_factor", getCurrentScaleCalibrationFactor(), 6);
+    appendJsonFloat(json, "safety_current_hi_a", safetyConfig.currentA.hi, 3);
+    appendJsonFloat(json, "safety_current_hihi_a", safetyConfig.currentA.hihi, 3);
+    appendJsonFloat(json, "safety_motor_temp_hi_c", safetyConfig.motorTemperatureC.hi, 2);
+    appendJsonFloat(json, "safety_motor_temp_hihi_c", safetyConfig.motorTemperatureC.hihi, 2);
+    appendJsonFloat(json, "safety_esc_temp_hi_c", safetyConfig.escTemperatureC.hi, 2);
+    appendJsonFloat(json, "safety_esc_temp_hihi_c", safetyConfig.escTemperatureC.hihi, 2);
+    appendJsonString(json, "safety_current_state", String(safetyLevelToString(safetyStatus.currentLevel)));
+    appendJsonString(json, "safety_motor_temp_state", String(safetyLevelToString(safetyStatus.motorTemperatureLevel)));
+    appendJsonString(json, "safety_esc_temp_state", String(safetyLevelToString(safetyStatus.escTemperatureLevel)));
+    appendJsonBool(json, "safety_trip_active", safetyStatus.tripActive);
+    appendJsonString(json, "safety_trip_reason", safetyStatus.tripReason);
     appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
     if (includeTestResults) {
         appendJsonTestResults(json, false);

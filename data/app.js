@@ -46,6 +46,18 @@ window.addEventListener("load", () => {
     configScaleCalibrationValue: document.getElementById("config-scale-calibration-value"),
     configScaleCalibrationButton: document.getElementById("config-scale-calibration-button"),
     configScaleFactorValue: document.getElementById("config-scale-factor-value"),
+    configSafetyCurrentHiValue: document.getElementById("config-safety-current-hi-value"),
+    configSafetyCurrentHiButton: document.getElementById("config-safety-current-hi-button"),
+    configSafetyCurrentHiHiValue: document.getElementById("config-safety-current-hihi-value"),
+    configSafetyCurrentHiHiButton: document.getElementById("config-safety-current-hihi-button"),
+    configSafetyMotorTempHiValue: document.getElementById("config-safety-motor-temp-hi-value"),
+    configSafetyMotorTempHiButton: document.getElementById("config-safety-motor-temp-hi-button"),
+    configSafetyMotorTempHiHiValue: document.getElementById("config-safety-motor-temp-hihi-value"),
+    configSafetyMotorTempHiHiButton: document.getElementById("config-safety-motor-temp-hihi-button"),
+    configSafetyEscTempHiValue: document.getElementById("config-safety-esc-temp-hi-value"),
+    configSafetyEscTempHiButton: document.getElementById("config-safety-esc-temp-hi-button"),
+    configSafetyEscTempHiHiValue: document.getElementById("config-safety-esc-temp-hihi-value"),
+    configSafetyEscTempHiHiButton: document.getElementById("config-safety-esc-temp-hihi-button"),
     testingThrottle: document.getElementById("testing-throttle-value"),
     testingThrottleHealth: document.getElementById("testing-throttle-health"),
     voltage: document.getElementById("voltage-value"),
@@ -382,6 +394,17 @@ window.addEventListener("load", () => {
     element.value = value;
   };
 
+  const setThresholdInputValueIfIdle = (element, value, digits) => {
+    if (!element || document.activeElement === element) {
+      return;
+    }
+
+    const numericValue = Number(value);
+    element.value = Number.isFinite(numericValue) && numericValue >= 0
+      ? numericValue.toFixed(digits)
+      : "";
+  };
+
   const setHealth = (element, text, state = "ok") => {
     if (!element) {
       return;
@@ -394,6 +417,19 @@ window.addEventListener("load", () => {
       element.classList.add("metric-row__health--error");
     }
     element.textContent = text;
+  };
+
+  const describeSafetyState = (state, normalText, hiText, hihiText, unavailableText) => {
+    if (state === "hihi") {
+      return { text: hihiText, severity: "error" };
+    }
+    if (state === "hi") {
+      return { text: hiText, severity: "warn" };
+    }
+    if (state === "normal") {
+      return { text: normalText, severity: "ok" };
+    }
+    return { text: unavailableText, severity: "warn" };
   };
 
   const formatNumber = (value, unit, digits = 2) => {
@@ -993,7 +1029,19 @@ window.addEventListener("load", () => {
       ui.configVoltageHighButton,
       ui.configScaleTareButton,
       ui.configScaleCalibrationValue,
-      ui.configScaleCalibrationButton
+      ui.configScaleCalibrationButton,
+      ui.configSafetyCurrentHiValue,
+      ui.configSafetyCurrentHiButton,
+      ui.configSafetyCurrentHiHiValue,
+      ui.configSafetyCurrentHiHiButton,
+      ui.configSafetyMotorTempHiValue,
+      ui.configSafetyMotorTempHiButton,
+      ui.configSafetyMotorTempHiHiValue,
+      ui.configSafetyMotorTempHiHiButton,
+      ui.configSafetyEscTempHiValue,
+      ui.configSafetyEscTempHiButton,
+      ui.configSafetyEscTempHiHiValue,
+      ui.configSafetyEscTempHiHiButton
     ].forEach((element) => {
       if (element) {
         element.disabled = disabled;
@@ -1134,6 +1182,12 @@ window.addEventListener("load", () => {
         ? Number(data.scale_calibration_factor).toFixed(6)
         : "--";
     }
+    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiValue, data.safety_current_hi_a, 3);
+    setThresholdInputValueIfIdle(ui.configSafetyCurrentHiHiValue, data.safety_current_hihi_a, 3);
+    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiValue, data.safety_motor_temp_hi_c, 1);
+    setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiHiValue, data.safety_motor_temp_hihi_c, 1);
+    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 1);
+    setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 1);
     updateChart(chartContexts.testing, cachedTestResults);
     updateTestingEfficiencySummary(cachedTestResults, Boolean(data.test_running));
 
@@ -1165,10 +1219,8 @@ window.addEventListener("load", () => {
       setHealth(ui.overviewThrottleHealth, "Throttle command active");
       setHealth(ui.testingThrottleHealth, "Throttle command active");
       setHealth(ui.voltageHealth, "ESC telemetry healthy");
-      setHealth(ui.currentHealth, "Current sensor healthy");
       setHealth(ui.powerHealth, "Computed from live feed");
       setHealth(ui.rpmHealth, "RPM telemetry healthy");
-      setHealth(ui.escTempHealth, "ESC thermal sensor healthy");
     } else {
       setHealth(ui.overviewThrottleHealth, "Awaiting ESC telemetry", "warn");
       setHealth(ui.testingThrottleHealth, "Awaiting ESC telemetry", "warn");
@@ -1177,6 +1229,26 @@ window.addEventListener("load", () => {
       setHealth(ui.powerHealth, "Waiting for live feed", "warn");
       setHealth(ui.rpmHealth, "Awaiting ESC telemetry", "warn");
       setHealth(ui.escTempHealth, "Awaiting ESC telemetry", "warn");
+    }
+
+    if (hasTelemetry) {
+      const currentSafety = describeSafetyState(
+        data.safety_current_state,
+        "Current sensor healthy",
+        "Current HI warning active",
+        "Current HIHI stop triggered",
+        "Awaiting ESC telemetry"
+      );
+      setHealth(ui.currentHealth, currentSafety.text, currentSafety.severity);
+
+      const escTempSafety = describeSafetyState(
+        data.safety_esc_temp_state,
+        "ESC thermal sensor healthy",
+        "ESC temp HI warning active",
+        "ESC temp HIHI stop triggered",
+        "Awaiting ESC telemetry"
+      );
+      setHealth(ui.escTempHealth, escTempSafety.text, escTempSafety.severity);
     }
 
     if (scaleReady) {
@@ -1188,7 +1260,14 @@ window.addEventListener("load", () => {
     }
 
     if (hasIr) {
-      setHealth(ui.motorTempHealth, "IR target healthy");
+      const motorTempSafety = describeSafetyState(
+        data.safety_motor_temp_state,
+        "IR target healthy",
+        "Motor temp HI warning active",
+        "Motor temp HIHI stop triggered",
+        "IR sensor offline"
+      );
+      setHealth(ui.motorTempHealth, motorTempSafety.text, motorTempSafety.severity);
       setHealth(ui.ambientTempHealth, "Ambient sensor healthy");
     } else {
       setHealth(ui.motorTempHealth, "IR sensor offline", "error");
@@ -1401,6 +1480,34 @@ window.addEventListener("load", () => {
     ui.configScaleCalibrationValue.value = `${normalizedValue}`;
     await sendConfigurationCommand(`scale calibration ${normalizedValue}`);
   };
+
+  const runSafetyThresholdCommand = async (input, prefix, digits = 3) => {
+    if (!input) {
+      return;
+    }
+
+    if (`${input.value}`.trim() === "") {
+      input.focus();
+      return;
+    }
+
+    const targetValue = Number(input.value);
+    if (!Number.isFinite(targetValue) || targetValue < 0) {
+      input.focus();
+      return;
+    }
+
+    const normalizedValue = Number(targetValue.toFixed(digits));
+    input.value = `${normalizedValue}`;
+    await sendConfigurationCommand(`${prefix}${normalizedValue}`);
+  };
+
+  const runSafetyCurrentHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiValue, "set current hi ", 3);
+  const runSafetyCurrentHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiHiValue, "set current hihi ", 3);
+  const runSafetyMotorTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiValue, "set motor temp hi ", 1);
+  const runSafetyMotorTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiHiValue, "set motor temp hihi ", 1);
+  const runSafetyEscTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiValue, "set esc temp hi ", 1);
+  const runSafetyEscTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiHiValue, "set esc temp hihi ", 1);
 
   const runMotorTest = async () => {
     if (!ui.startMotorTestButton || motorTestPending) {
@@ -1836,6 +1943,84 @@ window.addEventListener("load", () => {
       if (event.key === "Enter") {
         event.preventDefault();
         runScaleCalibrationCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyCurrentHiButton) {
+    ui.configSafetyCurrentHiButton.addEventListener("click", runSafetyCurrentHiCommand);
+  }
+
+  if (ui.configSafetyCurrentHiValue) {
+    ui.configSafetyCurrentHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyCurrentHiCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyCurrentHiHiButton) {
+    ui.configSafetyCurrentHiHiButton.addEventListener("click", runSafetyCurrentHiHiCommand);
+  }
+
+  if (ui.configSafetyCurrentHiHiValue) {
+    ui.configSafetyCurrentHiHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyCurrentHiHiCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyMotorTempHiButton) {
+    ui.configSafetyMotorTempHiButton.addEventListener("click", runSafetyMotorTempHiCommand);
+  }
+
+  if (ui.configSafetyMotorTempHiValue) {
+    ui.configSafetyMotorTempHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyMotorTempHiCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyMotorTempHiHiButton) {
+    ui.configSafetyMotorTempHiHiButton.addEventListener("click", runSafetyMotorTempHiHiCommand);
+  }
+
+  if (ui.configSafetyMotorTempHiHiValue) {
+    ui.configSafetyMotorTempHiHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyMotorTempHiHiCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyEscTempHiButton) {
+    ui.configSafetyEscTempHiButton.addEventListener("click", runSafetyEscTempHiCommand);
+  }
+
+  if (ui.configSafetyEscTempHiValue) {
+    ui.configSafetyEscTempHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyEscTempHiCommand();
+      }
+    });
+  }
+
+  if (ui.configSafetyEscTempHiHiButton) {
+    ui.configSafetyEscTempHiHiButton.addEventListener("click", runSafetyEscTempHiHiCommand);
+  }
+
+  if (ui.configSafetyEscTempHiHiValue) {
+    ui.configSafetyEscTempHiHiValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runSafetyEscTempHiHiCommand();
       }
     });
   }

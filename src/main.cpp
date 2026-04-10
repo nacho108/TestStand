@@ -10,6 +10,7 @@
 #include "esc_telemetry.h"
 #include "ir_manager.h"
 #include "motor_control.h"
+#include "safety_manager.h"
 #include "simulation.h"
 #include "scale_manager.h"
 #include "test_runner.h"
@@ -70,6 +71,7 @@ void setup() {
     setCalibrationDefaults();
     loadCalibration();
     loadMotorPoleCount();
+    loadSafetyConfiguration();
     beginSimulation();
 
     Wire.begin();
@@ -109,6 +111,7 @@ void setup() {
         Serial.println("Ready.");
         printHelp();
         printCalibrationStatus();
+        printSafetyConfiguration();
         printMotorPoleCount();
         showPrompt();
         startupConsoleReady = true;
@@ -121,6 +124,7 @@ void loop() {
     updateRamp();
     pollEscTelemetry();
     pollScale();
+    updateSafetyStatus();
     updateWebServer();
     updateAvailableLed();
 
@@ -128,6 +132,7 @@ void loop() {
         Serial.println("Ready.");
         printHelp();
         printCalibrationStatus();
+        printSafetyConfiguration();
         printMotorPoleCount();
         showPrompt();
         startupConsoleReady = true;

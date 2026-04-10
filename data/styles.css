@@ -329,7 +329,7 @@ body::before {
 
 .configuration-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
 }
 
@@ -512,6 +512,14 @@ body::before {
   font: inherit;
   font-weight: 700;
   background: transparent;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.overview-motor-controls__input-wrap input::-webkit-outer-spin-button,
+.overview-motor-controls__input-wrap input::-webkit-inner-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
 }
 
 .overview-motor-controls__unit {
@@ -543,6 +551,14 @@ body::before {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.config-note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1.45;
 }
 
 .overview-motor-controls__stop {
