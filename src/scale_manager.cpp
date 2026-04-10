@@ -26,6 +26,8 @@ double scaleWindowWeightSum = 0.0;
 double scaleWindowWeightSqSum = 0.0;
 bool startupAutoTarePending = false;
 bool startupAutoTareCompleted = false;
+unsigned long lastScaleRecoveryAttemptMs = 0;
+bool scaleHasSeenSamplesSinceInit = false;
 
 void clearScaleWindow() {
     scaleWindowHead = 0;
@@ -109,7 +111,76 @@ void pushScaleSample(int32_t raw) {
     scaleWindowWeightSqSum += (double)weight * (double)weight;
 
     lastScaleReadMs = nowMs;
+    scaleHasSeenSamplesSinceInit = true;
     refreshScaleWindowOutputs(nowMs);
+}
+
+bool configureScaleHardware() {
+    scaleDetected = scale.begin();
+    if (!scaleDetected) {
+        clearScaleWindow();
+        return false;
+    }
+
+    scale.setLDO(NAU7802_LDO_3V0);
+    scale.setGain(NAU7802_GAIN_128);
+    scale.setSampleRate(NAU7802_SPS_80);
+    if (!scale.calibrateAFE()) {
+        Serial.println("WARNING: NAU7802 AFE calibration failed.");
+    }
+
+    loadScaleCalibration();
+    clearScaleWindow();
+    scaleHasSeenSamplesSinceInit = false;
+    return true;
+}
+
+bool recoverScaleIfStalled(unsigned long nowMs) {
+    if (!scaleDetected) {
+        return false;
+    }
+
+    if (scale.available()) {
+        return false;
+    }
+
+    if (lastScaleRecoveryAttemptMs != 0 &&
+        nowMs - lastScaleRecoveryAttemptMs < SCALE_RECOVERY_RETRY_MS) {
+        return false;
+    }
+
+    if (!scaleHasSeenSamplesSinceInit || lastScaleReadMs == 0) {
+        return false;
+    }
+
+    if (nowMs < lastScaleReadMs) {
+        return false;
+    }
+
+    const unsigned long elapsedSinceLastSampleMs = nowMs - lastScaleReadMs;
+    const bool runtimeTimedOut =
+        (elapsedSinceLastSampleMs >= SCALE_NO_SAMPLE_RUNTIME_TIMEOUT_MS);
+    if (!runtimeTimedOut) {
+        return false;
+    }
+
+    lastScaleRecoveryAttemptMs = nowMs;
+
+    Serial.print("WARNING: NAU7802 sample stream stalled after ");
+    Serial.print(elapsedSinceLastSampleMs);
+    Serial.print(" ms without data");
+    Serial.println(". Reinitializing scale.");
+
+    const bool preserveAutoTarePending = startupAutoTarePending && !startupAutoTareCompleted;
+    if (!configureScaleHardware()) {
+        Serial.println("WARNING: NAU7802 reinitialization failed.");
+        startupAutoTarePending = preserveAutoTarePending;
+        return false;
+    }
+
+    startupAutoTarePending = preserveAutoTarePending;
+    startupAutoTareCompleted = !preserveAutoTarePending;
+    return true;
 }
 
 }
@@ -124,20 +195,12 @@ void beginScaleManager() {
         return;
     }
 
-    scaleDetected = scale.begin();
-    if (!scaleDetected) {
-        clearScaleWindow();
+    lastScaleRecoveryAttemptMs = 0;
+    if (!configureScaleHardware()) {
         startupAutoTarePending = false;
         startupAutoTareCompleted = false;
         return;
     }
-    scale.setLDO(NAU7802_LDO_3V0);
-    scale.setGain(NAU7802_GAIN_128);
-    scale.setSampleRate(NAU7802_SPS_80);
-    scale.calibrateAFE();
-    
-    loadScaleCalibration();
-    clearScaleWindow();
     startupAutoTarePending = true;
     startupAutoTareCompleted = false;
 }
@@ -152,9 +215,12 @@ void pollScale() {
         pushScaleSample(scale.getReading());
     }
 
+    const unsigned long nowMs = millis();
     if (scaleDetected) {
-        refreshScaleWindowOutputs(millis());
+        refreshScaleWindowOutputs(nowMs);
     }
+
+    recoverScaleIfStalled(nowMs);
 
     if (!scaleDetected || !startupAutoTarePending || startupAutoTareCompleted) {
         return;
