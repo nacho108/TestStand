@@ -619,7 +619,7 @@ body::before {
 }
 
 .chart-sidebar--testing {
-  width: 120px;
+  width: 156px;
 }
 
 .chart-sidebar--study {
@@ -641,6 +641,7 @@ body::before {
 
 .chart-summary-panel--testing {
   max-height: calc(100% - 54px);
+  overflow: hidden;
 }
 
 .chart-summary-panel__title {

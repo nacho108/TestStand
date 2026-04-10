@@ -246,7 +246,12 @@ window.addEventListener("load", () => {
   const calculateThrustEfficiency = (thrustGrams, powerWatts) => {
     const thrust = Number(thrustGrams);
     const power = Number(powerWatts);
-    if (!Number.isFinite(thrust) || !Number.isFinite(power) || Math.abs(power) < 1e-6) {
+    if (
+      !Number.isFinite(thrust)
+      || !Number.isFinite(power)
+      || thrust <= 0
+      || power <= 1
+    ) {
       return Number.NaN;
     }
 
