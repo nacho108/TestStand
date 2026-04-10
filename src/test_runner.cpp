@@ -613,9 +613,8 @@ bool runMotorTest(bool pusherMode) {
 
     Serial.println("Motor test completed.");
     printTestResultsCsv();
-    testSavePromptPending = true;
+    testSavePromptPending = false;
     testFilenamePromptPending = false;
-    Serial.println("Would you like to save the test? Type YES to save or NO to skip.");
     return true;
 }
 
