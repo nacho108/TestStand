@@ -449,6 +449,23 @@ window.addEventListener("load", () => {
     return `${Number(value).toFixed(digits)} ${unit}`;
   };
 
+  const formatAdaptiveNumber = (value, unit) => {
+    const numericValue = Number(value);
+    if (value === null || value === undefined || Number.isNaN(numericValue)) {
+      return "--";
+    }
+
+    const magnitude = Math.abs(numericValue);
+    let digits = 0;
+    if (magnitude < 10) {
+      digits = 2;
+    } else if (magnitude < 100) {
+      digits = 1;
+    }
+
+    return `${numericValue.toFixed(digits)} ${unit}`;
+  };
+
   const formatInteger = (value, unit) => {
     if (value === null || value === undefined || Number.isNaN(Number(value))) {
       return "--";
@@ -1175,15 +1192,15 @@ window.addEventListener("load", () => {
     }
 
     setText(ui.voltage, formatNumber(data.voltage_v, "V", 3));
-    setText(ui.current, formatNumber(data.current_a, "A", 3));
-    setText(ui.power, formatNumber(data.power_w, "W", 2));
+    setText(ui.current, formatAdaptiveNumber(data.current_a, "A"));
+    setText(ui.power, formatAdaptiveNumber(data.power_w, "W"));
     setText(ui.overviewThrottle, formatNumber(data.throttle_percent, "%", 1));
     setText(ui.testingThrottle, formatNumber(data.throttle_percent, "%", 1));
     setText(ui.rpm, formatInteger(data.rpm, "rpm"));
     setText(ui.escTemp, formatNumber(data.esc_temperature_c, "deg C", 1));
     setText(ui.motorTemp, formatNumber(data.ir_object_c, "deg C", 1));
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
-    setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
+    setText(ui.thrust, formatAdaptiveNumber(data.thrust_grams, "g"));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
     setFixedInputValueIfIdle(ui.configEscPolesValue, Number(data.motor_poles) || 0, 0);
     if (ui.configScaleFactorValue) {
