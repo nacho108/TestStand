@@ -34,6 +34,14 @@ window.addEventListener("load", () => {
     configEscPolesValue: document.getElementById("config-esc-poles-value"),
     configEscPolesButton: document.getElementById("config-esc-poles-button"),
     configEscReverseButton: document.getElementById("config-esc-reverse-button"),
+    configCurrentLowValue: document.getElementById("config-current-low-value"),
+    configCurrentLowButton: document.getElementById("config-current-low-button"),
+    configCurrentHighValue: document.getElementById("config-current-high-value"),
+    configCurrentHighButton: document.getElementById("config-current-high-button"),
+    configVoltageLowValue: document.getElementById("config-voltage-low-value"),
+    configVoltageLowButton: document.getElementById("config-voltage-low-button"),
+    configVoltageHighValue: document.getElementById("config-voltage-high-value"),
+    configVoltageHighButton: document.getElementById("config-voltage-high-button"),
     configScaleTareButton: document.getElementById("config-scale-tare-button"),
     configScaleCalibrationValue: document.getElementById("config-scale-calibration-value"),
     configScaleCalibrationButton: document.getElementById("config-scale-calibration-button"),
@@ -975,6 +983,14 @@ window.addEventListener("load", () => {
       ui.configEscPolesValue,
       ui.configEscPolesButton,
       ui.configEscReverseButton,
+      ui.configCurrentLowValue,
+      ui.configCurrentLowButton,
+      ui.configCurrentHighValue,
+      ui.configCurrentHighButton,
+      ui.configVoltageLowValue,
+      ui.configVoltageLowButton,
+      ui.configVoltageHighValue,
+      ui.configVoltageHighButton,
       ui.configScaleTareButton,
       ui.configScaleCalibrationValue,
       ui.configScaleCalibrationButton
@@ -1332,6 +1348,38 @@ window.addEventListener("load", () => {
 
   const runEscReverseCommand = async () => {
     await sendConfigurationCommand("esc reverse");
+  };
+
+  const runCalibrationPointCommand = async (input, prefix) => {
+    if (!input) {
+      return;
+    }
+
+    const targetValue = Number(input.value);
+    if (!Number.isFinite(targetValue) || targetValue < 0) {
+      input.focus();
+      return;
+    }
+
+    const normalizedValue = Number(targetValue.toFixed(3));
+    input.value = `${normalizedValue}`;
+    await sendConfigurationCommand(`${prefix}${normalizedValue}`);
+  };
+
+  const runCurrentLowCalibrationCommand = async () => {
+    await runCalibrationPointCommand(ui.configCurrentLowValue, "calibrate current low ");
+  };
+
+  const runCurrentHighCalibrationCommand = async () => {
+    await runCalibrationPointCommand(ui.configCurrentHighValue, "calibrate current high ");
+  };
+
+  const runVoltageLowCalibrationCommand = async () => {
+    await runCalibrationPointCommand(ui.configVoltageLowValue, "calibrate voltage low ");
+  };
+
+  const runVoltageHighCalibrationCommand = async () => {
+    await runCalibrationPointCommand(ui.configVoltageHighValue, "calibrate voltage high ");
   };
 
   const runScaleTareCommand = async () => {
@@ -1721,6 +1769,58 @@ window.addEventListener("load", () => {
 
   if (ui.configEscReverseButton) {
     ui.configEscReverseButton.addEventListener("click", runEscReverseCommand);
+  }
+
+  if (ui.configCurrentLowButton) {
+    ui.configCurrentLowButton.addEventListener("click", runCurrentLowCalibrationCommand);
+  }
+
+  if (ui.configCurrentLowValue) {
+    ui.configCurrentLowValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runCurrentLowCalibrationCommand();
+      }
+    });
+  }
+
+  if (ui.configCurrentHighButton) {
+    ui.configCurrentHighButton.addEventListener("click", runCurrentHighCalibrationCommand);
+  }
+
+  if (ui.configCurrentHighValue) {
+    ui.configCurrentHighValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runCurrentHighCalibrationCommand();
+      }
+    });
+  }
+
+  if (ui.configVoltageLowButton) {
+    ui.configVoltageLowButton.addEventListener("click", runVoltageLowCalibrationCommand);
+  }
+
+  if (ui.configVoltageLowValue) {
+    ui.configVoltageLowValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runVoltageLowCalibrationCommand();
+      }
+    });
+  }
+
+  if (ui.configVoltageHighButton) {
+    ui.configVoltageHighButton.addEventListener("click", runVoltageHighCalibrationCommand);
+  }
+
+  if (ui.configVoltageHighValue) {
+    ui.configVoltageHighValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runVoltageHighCalibrationCommand();
+      }
+    });
   }
 
   if (ui.configScaleTareButton) {
