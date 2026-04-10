@@ -738,3 +738,15 @@ bool setScaleCalibrationFactor(float newFactor) {
     Serial.println(newFactor, 6);
     return true;
 }
+
+float getCurrentScaleCalibrationFactor() {
+    if (simulationEnabled()) {
+        return DEFAULT_SCALE_CAL_FACTOR;
+    }
+
+    if (!scaleDetected) {
+        return NAN;
+    }
+
+    return scale.getCalibrationFactor();
+}

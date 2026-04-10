@@ -23,3 +23,4 @@ void printScaleReading();
 bool tareScale();
 void calibrateScale(float knownWeightGrams);
 bool setScaleCalibrationFactor(float newFactor);
+float getCurrentScaleCalibrationFactor();

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=20">
+  <link rel="stylesheet" href="/styles.css?v=23">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -29,6 +29,10 @@
         <a class="sidebar__nav-link" href="#study" data-view-link="study">
           <span class="nav-icon" aria-hidden="true"></span>
           <span>Study</span>
+        </a>
+        <a class="sidebar__nav-link" href="#configuration" data-view-link="configuration">
+          <span class="nav-icon" aria-hidden="true"></span>
+          <span>Configuration</span>
         </a>
       </nav>
     </aside>
@@ -71,6 +75,25 @@
                 <span class="metric-row__detail metric-row__detail--meta" id="thrust-stddev-value">Std dev --</span>
               </div>
             </article>
+          </div>
+        </article>
+
+        <article class="group-card group-card--motor-control" id="overview-motor-control-card">
+          <div class="group-card__header">
+            <h2>Motor control</h2>
+          </div>
+
+          <div class="overview-motor-controls">
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="overview-motor-set-button" type="button">Motor set</button>
+              <label class="overview-motor-controls__field" for="overview-motor-set-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="overview-motor-set-value" type="number" min="0" max="100" step="1" value="5">
+                  <span class="overview-motor-controls__unit">%</span>
+                </div>
+              </label>
+            </div>
+            <button class="test-button test-button--stop overview-motor-controls__stop" id="overview-motor-stop-button" type="button">Stop</button>
           </div>
         </article>
 
@@ -464,9 +487,54 @@
           </div>
         </article>
       </section>
+
+      <section class="configuration-grid" id="configuration" data-view-pane="configuration" hidden>
+        <article class="group-card group-card--configuration">
+          <div class="group-card__header">
+            <h2>ESC</h2>
+          </div>
+
+          <div class="overview-motor-controls">
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-esc-poles-button" type="button">Change Motor poles</button>
+              <label class="overview-motor-controls__field" for="config-esc-poles-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-esc-poles-value" type="number" min="2" max="100" step="1" value="28">
+                </div>
+              </label>
+            </div>
+            <button class="test-button" id="config-esc-reverse-button" type="button">Reverse/normal</button>
+          </div>
+        </article>
+
+        <article class="group-card group-card--configuration">
+          <div class="group-card__header">
+            <h2>Load cell</h2>
+          </div>
+
+          <div class="overview-motor-controls">
+            <button class="test-button" id="config-scale-tare-button" type="button">Tare</button>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-scale-calibration-button" type="button">Calibration</button>
+              <label class="overview-motor-controls__field" for="config-scale-calibration-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-scale-calibration-value" type="number" min="0" step="0.001" value="100">
+                  <span class="overview-motor-controls__unit">g</span>
+                </div>
+              </label>
+            </div>
+            <label class="config-readonly-field" for="config-scale-factor-value">
+              <span class="config-readonly-field__label">Current calibration factor</span>
+              <div class="overview-motor-controls__input-wrap overview-motor-controls__input-wrap--wide">
+                <input id="config-scale-factor-value" type="text" value="--" readonly>
+              </div>
+            </label>
+          </div>
+        </article>
+      </section>
     </main>
   </div>
 
-  <script src="/app.js?v=20"></script>
+  <script src="/app.js?v=23"></script>
 </body>
 </html>

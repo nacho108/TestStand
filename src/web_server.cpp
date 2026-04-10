@@ -14,6 +14,7 @@
 #include "console_ui.h"
 #include "esc_telemetry.h"
 #include "ir_manager.h"
+#include "scale_manager.h"
 #include "app_config.h"
 #include "test_runner.h"
 
@@ -547,6 +548,7 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonBool(json, "motor_test_cooling_enabled", isMotorTestCooldownEnabled());
     appendJsonBool(json, "motor_test_pusher_mode", isMotorTestPusherMode());
     appendJsonUnsigned(json, "motor_poles", (unsigned long)motorPoleCount);
+    appendJsonFloat(json, "scale_calibration_factor", getCurrentScaleCalibrationFactor(), 6);
     appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
     if (includeTestResults) {
         appendJsonTestResults(json, false);

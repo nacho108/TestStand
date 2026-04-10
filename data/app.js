@@ -27,6 +27,17 @@ window.addEventListener("load", () => {
     studyEfficiencySummaryList: document.getElementById("study-efficiency-summary-list"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
     overviewThrottleHealth: document.getElementById("overview-throttle-health"),
+    overviewMotorControlCard: document.getElementById("overview-motor-control-card"),
+    overviewMotorSetValue: document.getElementById("overview-motor-set-value"),
+    overviewMotorSetButton: document.getElementById("overview-motor-set-button"),
+    overviewMotorStopButton: document.getElementById("overview-motor-stop-button"),
+    configEscPolesValue: document.getElementById("config-esc-poles-value"),
+    configEscPolesButton: document.getElementById("config-esc-poles-button"),
+    configEscReverseButton: document.getElementById("config-esc-reverse-button"),
+    configScaleTareButton: document.getElementById("config-scale-tare-button"),
+    configScaleCalibrationValue: document.getElementById("config-scale-calibration-value"),
+    configScaleCalibrationButton: document.getElementById("config-scale-calibration-button"),
+    configScaleFactorValue: document.getElementById("config-scale-factor-value"),
     testingThrottle: document.getElementById("testing-throttle-value"),
     testingThrottleHealth: document.getElementById("testing-throttle-health"),
     voltage: document.getElementById("voltage-value"),
@@ -194,12 +205,15 @@ window.addEventListener("load", () => {
   const viewTitles = {
     overview: "Live overview",
     testing: "Testing",
-    study: "Study"
+    study: "Study",
+    configuration: "Configuration"
   };
 
   let socket = null;
   let reconnectTimer = null;
   let pollTimer = null;
+  let overviewMotorCommandPending = false;
+  let configurationCommandPending = false;
   let motorTestPending = false;
   let motorTestCoolingUpdatePending = false;
   let motorTestDirectionUpdatePending = false;
@@ -350,6 +364,14 @@ window.addEventListener("load", () => {
     if (element) {
       element.textContent = value;
     }
+  };
+
+  const setInputValueIfIdle = (element, value) => {
+    if (!element || document.activeElement === element) {
+      return;
+    }
+
+    element.value = value;
   };
 
   const setHealth = (element, text, state = "ok") => {
@@ -948,6 +970,21 @@ window.addEventListener("load", () => {
     }
   };
 
+  const setConfigurationControlsState = (disabled = false) => {
+    [
+      ui.configEscPolesValue,
+      ui.configEscPolesButton,
+      ui.configEscReverseButton,
+      ui.configScaleTareButton,
+      ui.configScaleCalibrationValue,
+      ui.configScaleCalibrationButton
+    ].forEach((element) => {
+      if (element) {
+        element.disabled = disabled;
+      }
+    });
+  };
+
   const applyDisconnectedState = () => {
     setHealth(ui.overviewThrottleHealth, "Waiting for motor command", "warn");
     setHealth(ui.testingThrottleHealth, "Waiting for motor command", "warn");
@@ -963,6 +1000,9 @@ window.addEventListener("load", () => {
     setDownloadTestButtonState(true);
     setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
     setMotorTestDirectionState(motorTestDirectionUpdatePending);
+    if (ui.configScaleFactorValue) {
+      ui.configScaleFactorValue.value = "--";
+    }
   };
 
   const rebuildStudySelect = () => {
@@ -1036,6 +1076,10 @@ window.addEventListener("load", () => {
       pane.hidden = !shouldShow;
     });
 
+    if (ui.overviewMotorControlCard) {
+      ui.overviewMotorControlCard.hidden = view === "testing";
+    }
+
     setText(ui.viewTitle, viewTitles[view] || "Live overview");
 
     if (view === "study") {
@@ -1068,6 +1112,12 @@ window.addEventListener("load", () => {
     setText(ui.ambientTemp, formatNumber(data.ir_ambient_c, "deg C", 1));
     setText(ui.thrust, formatNumber(data.thrust_grams, "g", 1));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
+    setInputValueIfIdle(ui.configEscPolesValue, `${Number(data.motor_poles) || 0}`);
+    if (ui.configScaleFactorValue) {
+      ui.configScaleFactorValue.value = Number.isFinite(Number(data.scale_calibration_factor))
+        ? Number(data.scale_calibration_factor).toFixed(6)
+        : "--";
+    }
     updateChart(chartContexts.testing, cachedTestResults);
     updateTestingEfficiencySummary(cachedTestResults, Boolean(data.test_running));
 
@@ -1164,6 +1214,144 @@ window.addEventListener("load", () => {
 
     pollStatus();
     pollTimer = window.setInterval(pollStatus, 250);
+  };
+
+  const setOverviewMotorControlsState = (disabled) => {
+    if (ui.overviewMotorSetValue) {
+      ui.overviewMotorSetValue.disabled = disabled;
+    }
+    if (ui.overviewMotorSetButton) {
+      ui.overviewMotorSetButton.disabled = disabled;
+    }
+    if (ui.overviewMotorStopButton) {
+      ui.overviewMotorStopButton.disabled = disabled;
+    }
+  };
+
+  const sendOverviewMotorCommand = async (command, pendingText) => {
+    if (overviewMotorCommandPending) {
+      return;
+    }
+
+    overviewMotorCommandPending = true;
+    setOverviewMotorControlsState(true);
+    if (pendingText) {
+      setHealth(ui.overviewThrottleHealth, pendingText, "warn");
+    }
+
+    try {
+      const body = new URLSearchParams({ cmd: command });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      await pollStatus();
+    } catch (error) {
+      setHealth(ui.overviewThrottleHealth, "Motor command failed", "error");
+    } finally {
+      overviewMotorCommandPending = false;
+      setOverviewMotorControlsState(false);
+    }
+  };
+
+  const sendConfigurationCommand = async (command) => {
+    if (configurationCommandPending) {
+      return false;
+    }
+
+    configurationCommandPending = true;
+    setConfigurationControlsState(true);
+
+    try {
+      const body = new URLSearchParams({ cmd: command });
+      const response = await fetch("/api/command", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+
+      await pollStatus();
+      return true;
+    } catch (error) {
+      return false;
+    } finally {
+      configurationCommandPending = false;
+      setConfigurationControlsState(false);
+    }
+  };
+
+  const runOverviewMotorSet = async () => {
+    if (!ui.overviewMotorSetValue) {
+      return;
+    }
+
+    const targetValue = Number(ui.overviewMotorSetValue.value);
+    if (!Number.isFinite(targetValue) || targetValue < 0 || targetValue > 100) {
+      setHealth(ui.overviewThrottleHealth, "Enter 0 to 100%", "error");
+      ui.overviewMotorSetValue.focus();
+      return;
+    }
+
+    const normalizedValue = Number(targetValue.toFixed(1));
+    ui.overviewMotorSetValue.value = `${normalizedValue}`;
+    await sendOverviewMotorCommand(`motor set ${normalizedValue}`, `Setting ${normalizedValue.toFixed(1)}%`);
+  };
+
+  const runOverviewMotorStop = async () => {
+    await sendOverviewMotorCommand("motor stop", "Stopping motor");
+  };
+
+  const runEscPolesCommand = async () => {
+    if (!ui.configEscPolesValue) {
+      return;
+    }
+
+    const targetValue = Number(ui.configEscPolesValue.value);
+    if (!Number.isInteger(targetValue) || targetValue < 2 || targetValue > 100) {
+      ui.configEscPolesValue.focus();
+      return;
+    }
+
+    ui.configEscPolesValue.value = `${targetValue}`;
+    await sendConfigurationCommand(`esc poles ${targetValue}`);
+  };
+
+  const runEscReverseCommand = async () => {
+    await sendConfigurationCommand("esc reverse");
+  };
+
+  const runScaleTareCommand = async () => {
+    await sendConfigurationCommand("scale tare");
+  };
+
+  const runScaleCalibrationCommand = async () => {
+    if (!ui.configScaleCalibrationValue) {
+      return;
+    }
+
+    const targetValue = Number(ui.configScaleCalibrationValue.value);
+    if (!Number.isFinite(targetValue) || targetValue <= 0) {
+      ui.configScaleCalibrationValue.focus();
+      return;
+    }
+
+    const normalizedValue = Number(targetValue.toFixed(3));
+    ui.configScaleCalibrationValue.value = `${normalizedValue}`;
+    await sendConfigurationCommand(`scale calibration ${normalizedValue}`);
   };
 
   const runMotorTest = async () => {
@@ -1499,6 +1687,57 @@ window.addEventListener("load", () => {
 
   if (ui.startMotorTestButton) {
     ui.startMotorTestButton.addEventListener("click", runMotorTest);
+  }
+
+  if (ui.overviewMotorSetButton) {
+    ui.overviewMotorSetButton.addEventListener("click", runOverviewMotorSet);
+  }
+
+  if (ui.overviewMotorSetValue) {
+    ui.overviewMotorSetValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runOverviewMotorSet();
+      }
+    });
+  }
+
+  if (ui.overviewMotorStopButton) {
+    ui.overviewMotorStopButton.addEventListener("click", runOverviewMotorStop);
+  }
+
+  if (ui.configEscPolesButton) {
+    ui.configEscPolesButton.addEventListener("click", runEscPolesCommand);
+  }
+
+  if (ui.configEscPolesValue) {
+    ui.configEscPolesValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runEscPolesCommand();
+      }
+    });
+  }
+
+  if (ui.configEscReverseButton) {
+    ui.configEscReverseButton.addEventListener("click", runEscReverseCommand);
+  }
+
+  if (ui.configScaleTareButton) {
+    ui.configScaleTareButton.addEventListener("click", runScaleTareCommand);
+  }
+
+  if (ui.configScaleCalibrationButton) {
+    ui.configScaleCalibrationButton.addEventListener("click", runScaleCalibrationCommand);
+  }
+
+  if (ui.configScaleCalibrationValue) {
+    ui.configScaleCalibrationValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runScaleCalibrationCommand();
+      }
+    });
   }
 
   if (ui.motorTestCoolingToggle) {
