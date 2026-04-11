@@ -9,6 +9,7 @@
 #include <freertos/FreeRTOS.h>
 
 #include "app_state.h"
+#include "alarm_manager.h"
 #include "calibration.h"
 #include "commands.h"
 #include "console_ui.h"
@@ -486,6 +487,16 @@ void appendJsonString(String& json, const char* key, const String& value, bool w
     }
 }
 
+void appendJsonRaw(String& json, const char* key, const String& rawValue, bool withComma = true) {
+    json += "\"";
+    json += key;
+    json += "\":";
+    json += rawValue;
+    if (withComma) {
+        json += ",";
+    }
+}
+
 const char* safetyLevelToString(SafetyLevel level) {
     switch (level) {
         case SafetyLevel::Normal:
@@ -555,7 +566,7 @@ String buildStatusJson(bool includeTestResults = true) {
     const unsigned long nowMs = millis();
 
     String json;
-    json.reserve(includeTestResults ? 2048 : 512);
+    json.reserve(includeTestResults ? 3072 : 1536);
     json += "{";
     appendJsonUnsigned(json, "timestamp_ms", nowMs);
     appendJsonBool(json, "telemetry_valid", telemetryValid);
@@ -595,6 +606,9 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonString(json, "safety_esc_temp_state", String(safetyLevelToString(safetyStatus.escTemperatureLevel)));
     appendJsonBool(json, "safety_trip_active", safetyStatus.tripActive);
     appendJsonString(json, "safety_trip_reason", safetyStatus.tripReason);
+    appendJsonUnsigned(json, "alarm_unread_count", (unsigned long)getUnreadAlarmCount());
+    appendJsonUnsigned(json, "alarm_total_count", (unsigned long)getTotalAlarmCount());
+    appendJsonRaw(json, "recent_alarms", buildRecentAlarmsJson(10));
     appendJsonUnsigned(json, "test_result_count", (unsigned long)testResultCount, includeTestResults);
     if (includeTestResults) {
         appendJsonTestResults(json, false);
@@ -770,6 +784,11 @@ bool beginWebServer() {
         }
 
         request->send(202, "application/json", "{\"ok\":true,\"queued\":true}");
+    });
+
+    server.on("/api/alarms/read", HTTP_POST, [](AsyncWebServerRequest* request) {
+        markAllAlarmsRead();
+        request->send(200, "application/json", "{\"ok\":true}");
     });
 
     telemetrySocket.onEvent(handleWebSocketEvent);

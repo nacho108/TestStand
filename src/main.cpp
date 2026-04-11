@@ -2,6 +2,7 @@
 #include <Wire.h>
 
 #include "app_config.h"
+#include "alarm_manager.h"
 #include "app_state.h"
 #include "calibration.h"
 #include "commands.h"
@@ -100,6 +101,9 @@ void setup() {
     beginEscTelemetry();
     if (beginTestStorage()) {
         Serial.println("LittleFS test storage ready.");
+        if (!beginAlarmManager()) {
+            Serial.println("WARNING: Alarm storage init failed.");
+        }
         if (!beginWebServer()) {
             Serial.println("WARNING: Web server init failed.");
         }

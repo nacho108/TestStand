@@ -58,6 +58,17 @@ struct SafetyStatus {
     String tripReason;
 };
 
+struct AlarmEntry {
+    unsigned long sequence = 0;
+    unsigned long timestampMs = 0;
+    String source;
+    String severity;
+    String message;
+    float value = NAN;
+    float threshold = NAN;
+    String unit;
+};
+
 struct TestResultRow {
     int throttlePercent = 0;
     float voltageV = 0.0f;

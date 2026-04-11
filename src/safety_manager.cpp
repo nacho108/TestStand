@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "app_config.h"
+#include "alarm_manager.h"
 #include "app_state.h"
 #include "calibration.h"
 #include "motor_control.h"
@@ -21,6 +22,9 @@ constexpr const char* kEscTempHiHiKey = "safe_et_hihi";
 bool safetyConfigLoaded = false;
 bool safetyMotorTestStopRequested = false;
 String safetyMotorTestStopReason;
+SafetyLevel lastCurrentAlarmLevel = SafetyLevel::Unknown;
+SafetyLevel lastEscTempAlarmLevel = SafetyLevel::Unknown;
+SafetyLevel lastMotorTempAlarmLevel = SafetyLevel::Unknown;
 
 bool isThresholdEnabled(float value) {
     return isfinite(value) && value >= 0.0f;
@@ -91,6 +95,30 @@ void triggerSafetyTrip(const String& reason) {
     if (testRunning) {
         requestMotorTestStop();
     }
+}
+
+void logSafetyTransitionAlarm(
+    const char* sourceKey,
+    SafetyLevel previousLevel,
+    SafetyLevel currentLevel,
+    float value,
+    const SafetyThresholdPair& pair,
+    const char* unit
+) {
+    if (currentLevel != SafetyLevel::Hi && currentLevel != SafetyLevel::HiHi) {
+        return;
+    }
+
+    if (currentLevel == SafetyLevel::Hi && (previousLevel == SafetyLevel::Hi || previousLevel == SafetyLevel::HiHi)) {
+        return;
+    }
+
+    if (currentLevel == SafetyLevel::HiHi && previousLevel == SafetyLevel::HiHi) {
+        return;
+    }
+
+    const float threshold = currentLevel == SafetyLevel::HiHi ? pair.hihi : pair.hi;
+    logSafetyAlarm(sourceKey, currentLevel, value, threshold, unit);
 }
 
 bool assignThreshold(
@@ -215,6 +243,35 @@ void updateSafetyStatus() {
         motorTempAvailable,
         safetyConfig.motorTemperatureC
     );
+
+    logSafetyTransitionAlarm(
+        "current",
+        lastCurrentAlarmLevel,
+        safetyStatus.currentLevel,
+        currentA,
+        safetyConfig.currentA,
+        "A"
+    );
+    logSafetyTransitionAlarm(
+        "esc_temp",
+        lastEscTempAlarmLevel,
+        safetyStatus.escTemperatureLevel,
+        escTempC,
+        safetyConfig.escTemperatureC,
+        "C"
+    );
+    logSafetyTransitionAlarm(
+        "motor_temp",
+        lastMotorTempAlarmLevel,
+        safetyStatus.motorTemperatureLevel,
+        motorTempC,
+        safetyConfig.motorTemperatureC,
+        "C"
+    );
+
+    lastCurrentAlarmLevel = safetyStatus.currentLevel;
+    lastEscTempAlarmLevel = safetyStatus.escTemperatureLevel;
+    lastMotorTempAlarmLevel = safetyStatus.motorTemperatureLevel;
 
     String tripReason;
     if (safetyStatus.currentLevel == SafetyLevel::HiHi) {

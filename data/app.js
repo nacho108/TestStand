@@ -68,6 +68,12 @@ window.addEventListener("load", () => {
     configSafetyEscTempHiHiValue: document.getElementById("config-safety-esc-temp-hihi-value"),
     configSafetyEscTempHiHiButtonWrap: document.getElementById("config-safety-esc-temp-hihi-button-wrap"),
     configSafetyEscTempHiHiButton: document.getElementById("config-safety-esc-temp-hihi-button"),
+    alarmMenu: document.getElementById("alarm-menu"),
+    alarmButton: document.getElementById("alarm-button"),
+    alarmCount: document.getElementById("alarm-count"),
+    alarmPopover: document.getElementById("alarm-popover"),
+    alarmList: document.getElementById("alarm-list"),
+    alarmEmpty: document.getElementById("alarm-empty"),
     statusModal: document.getElementById("status-modal"),
     statusModalText: document.getElementById("status-modal-text"),
     testingThrottle: document.getElementById("testing-throttle-value"),
@@ -262,6 +268,12 @@ window.addEventListener("load", () => {
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
   let studyDatasets = [];
+  let alarmPanelOpen = false;
+  let alarmReadPending = false;
+  let alarmUnreadCount = 0;
+  let alarmTotalCount = 0;
+  let locallyViewedAlarmTotalCount = 0;
+  let recentAlarms = [];
   const safetyHighlightDurationMs = 2000;
   const safetyHighlightTimers = new Map();
 
@@ -690,6 +702,124 @@ window.addEventListener("load", () => {
     .replaceAll(">", "&gt;")
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
+
+  const formatAlarmTime = (timestampMs) => {
+    const ageSeconds = Math.max(
+      0,
+      Math.round(((Date.now() - performance.timeOrigin) - (Number(timestampMs) || 0)) / 1000)
+    );
+    const hours = Math.floor(ageSeconds / 3600);
+    const minutes = Math.floor((ageSeconds % 3600) / 60);
+    const seconds = ageSeconds % 60;
+
+    if (hours > 0) {
+      return `-${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+    return `-${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  };
+
+  const renderAlarmList = (alarms) => {
+    if (!ui.alarmList || !ui.alarmEmpty) {
+      return;
+    }
+
+    if (!Array.isArray(alarms) || alarms.length === 0) {
+      ui.alarmList.innerHTML = "";
+      ui.alarmEmpty.hidden = false;
+      ui.alarmEmpty.textContent = "No alarms logged yet.";
+      return;
+    }
+
+    ui.alarmEmpty.hidden = true;
+    ui.alarmList.innerHTML = alarms
+      .map((alarm) => {
+        const severity = `${alarm?.severity || "HI"}`.toUpperCase();
+        const severityClass = severity === "HIHI" ? "hihi" : "hi";
+        const source = alarm?.source || "Alarm";
+        const message = alarm?.message || `${source} ${severity} threshold reached`;
+        return `
+          <article class="alarm-item alarm-item--${severityClass}">
+            <div class="alarm-item__top">
+              <span class="alarm-item__title alarm-item__title--${severityClass}">${escapeHtml(source)} ${escapeHtml(severity)}</span>
+              <span class="alarm-item__time">${escapeHtml(formatAlarmTime(alarm?.timestamp_ms))}</span>
+            </div>
+            <div class="alarm-item__message">${escapeHtml(message)}</div>
+          </article>
+        `;
+      })
+      .join("");
+  };
+
+  const renderAlarmBell = () => {
+    if (!ui.alarmButton || !ui.alarmCount) {
+      return;
+    }
+
+    ui.alarmButton.classList.toggle("alarm-button--alert", alarmUnreadCount > 0);
+    ui.alarmCount.hidden = alarmUnreadCount <= 0;
+    ui.alarmCount.textContent = `${Math.min(alarmUnreadCount, 99)}`;
+  };
+
+  const setAlarmPanelState = (open) => {
+    alarmPanelOpen = open;
+    if (ui.alarmMenu) {
+      ui.alarmMenu.classList.toggle("alarm-menu--open", open);
+    }
+    if (ui.alarmPopover) {
+      ui.alarmPopover.hidden = !open;
+    }
+    if (ui.alarmButton) {
+      ui.alarmButton.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+  };
+
+  const markAlarmsRead = async () => {
+    if (alarmReadPending) {
+      return;
+    }
+
+    alarmReadPending = true;
+    locallyViewedAlarmTotalCount = alarmTotalCount;
+    alarmUnreadCount = 0;
+    renderAlarmBell();
+
+    try {
+      const response = await fetch("/api/alarms/read", {
+        method: "POST"
+      });
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+    } catch (error) {
+      // Keep the UI optimistic. The next live status update will resync if needed.
+    } finally {
+      alarmReadPending = false;
+    }
+  };
+
+  const toggleAlarmPanel = async () => {
+    const nextOpen = !alarmPanelOpen;
+    setAlarmPanelState(nextOpen);
+    if (nextOpen && alarmUnreadCount > 0) {
+      await markAlarmsRead();
+    }
+  };
+
+  const applyAlarmStatus = (data) => {
+    const nextTotalCount = Number(data.alarm_total_count) || 0;
+    const serverUnreadCount = Number(data.alarm_unread_count) || 0;
+    const nextRecentAlarms = Array.isArray(data.recent_alarms) ? data.recent_alarms : [];
+
+    alarmTotalCount = nextTotalCount;
+    if (serverUnreadCount === 0) {
+      locallyViewedAlarmTotalCount = Math.max(locallyViewedAlarmTotalCount, nextTotalCount);
+    }
+
+    alarmUnreadCount = nextTotalCount <= locallyViewedAlarmTotalCount ? 0 : serverUnreadCount;
+    recentAlarms = nextRecentAlarms;
+    renderAlarmList(recentAlarms);
+    renderAlarmBell();
+  };
 
   const formatTooltipValue = (value, unit, digits = 0) => {
     if (!Number.isFinite(value)) {
@@ -1594,6 +1724,7 @@ window.addEventListener("load", () => {
     if (ui.configScaleFactorValue) {
       ui.configScaleFactorValue.value = "--";
     }
+    renderAlarmBell();
   };
 
   const setView = (view) => {
@@ -1625,6 +1756,7 @@ window.addEventListener("load", () => {
     const scaleReady = hasScale && Boolean(data.scale_valid);
     const resultCount = Number(data.test_result_count) || 0;
     const hasInlineResults = Array.isArray(data.test_results);
+    applyAlarmStatus(data);
 
     if (hasInlineResults) {
       cachedTestResults = normalizeChartRows(data.test_results);
@@ -2335,6 +2467,7 @@ window.addEventListener("load", () => {
 
   setView("overview");
   applyDisconnectedState();
+  renderAlarmList([]);
   syncStudySeriesControls();
   updateChart(chartContexts.testing, []);
   updateStudyChart();
@@ -2346,6 +2479,31 @@ window.addEventListener("load", () => {
   if (ui.startMotorTestButton) {
     ui.startMotorTestButton.addEventListener("click", runMotorTest);
   }
+
+  if (ui.alarmButton) {
+    ui.alarmButton.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toggleAlarmPanel();
+    });
+  }
+
+  if (ui.alarmPopover) {
+    ui.alarmPopover.addEventListener("click", (event) => {
+      event.stopPropagation();
+    });
+  }
+
+  document.addEventListener("click", () => {
+    if (alarmPanelOpen) {
+      setAlarmPanelState(false);
+    }
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && alarmPanelOpen) {
+      setAlarmPanelState(false);
+    }
+  });
 
   if (ui.overviewMotorSetButton) {
     ui.overviewMotorSetButton.addEventListener("click", runOverviewMotorSet);

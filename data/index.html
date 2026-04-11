@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=25">
+  <link rel="stylesheet" href="/styles.css?v=26">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -40,6 +40,24 @@
     <main class="workspace">
       <section class="view-header">
         <h2 id="view-title">Live overview</h2>
+        <div class="alarm-menu" id="alarm-menu">
+          <button class="alarm-button" id="alarm-button" type="button" aria-label="Show alarms" aria-haspopup="true" aria-expanded="false">
+            <svg class="alarm-button__icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a4 4 0 0 0-4 4v1.2c0 .8-.28 1.57-.8 2.16L5.3 12.6a2 2 0 0 0 1.5 3.4h10.4a2 2 0 0 0 1.5-3.4l-1.9-2.24A3.3 3.3 0 0 1 16 8.2V7a4 4 0 0 0-4-4Zm0 18a2.5 2.5 0 0 0 2.33-1.6H9.67A2.5 2.5 0 0 0 12 21Z"/>
+            </svg>
+            <span class="alarm-button__badge" id="alarm-count" hidden>0</span>
+          </button>
+          <div class="alarm-popover" id="alarm-popover" hidden>
+            <div class="alarm-popover__header">
+              <div>
+                <p class="alarm-popover__eyebrow">Safety log</p>
+                <h3>Last 10 alarms</h3>
+              </div>
+            </div>
+            <p class="alarm-empty" id="alarm-empty">No alarms logged yet.</p>
+            <div class="alarm-list" id="alarm-list"></div>
+          </div>
+        </div>
       </section>
 
       <section class="group-grid" id="overview" data-view-pane="overview">
@@ -662,6 +680,6 @@
     </div>
   </div>
 
-  <script src="/app.js?v=25"></script>
+  <script src="/app.js?v=26"></script>
 </body>
 </html>
