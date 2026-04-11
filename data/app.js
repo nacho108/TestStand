@@ -34,6 +34,7 @@ window.addEventListener("load", () => {
     configEscKvButtonWrap: document.getElementById("config-esc-kv-button-wrap"),
     configEscKvButton: document.getElementById("config-esc-kv-button"),
     configEscReverseButton: document.getElementById("config-esc-reverse-button"),
+    configEscPassthroughButton: document.getElementById("config-esc-passthrough-button"),
     configCurrentLowValue: document.getElementById("config-current-low-value"),
     configCurrentLowButtonWrap: document.getElementById("config-current-low-button-wrap"),
     configCurrentLowButton: document.getElementById("config-current-low-button"),
@@ -76,6 +77,9 @@ window.addEventListener("load", () => {
     alarmEmpty: document.getElementById("alarm-empty"),
     statusModal: document.getElementById("status-modal"),
     statusModalText: document.getElementById("status-modal-text"),
+    confirmModal: document.getElementById("confirm-modal"),
+    confirmModalYesButton: document.getElementById("confirm-modal-yes-button"),
+    confirmModalCancelButton: document.getElementById("confirm-modal-cancel-button"),
     testingThrottle: document.getElementById("testing-throttle-value"),
     testingThrottleHealth: document.getElementById("testing-throttle-health"),
     voltage: document.getElementById("voltage-value"),
@@ -274,6 +278,7 @@ window.addEventListener("load", () => {
   let alarmTotalCount = 0;
   let locallyViewedAlarmTotalCount = 0;
   let recentAlarms = [];
+  let confirmModalResolver = null;
   let timeSyncTimer = null;
   let timeSynced = false;
   const safetyHighlightDurationMs = 2000;
@@ -1702,6 +1707,7 @@ window.addEventListener("load", () => {
       ui.configEscKvValue,
       ui.configEscKvButton,
       ui.configEscReverseButton,
+      ui.configEscPassthroughButton,
       ui.configCurrentLowValue,
       ui.configCurrentLowButton,
       ui.configCurrentHighValue,
@@ -1744,6 +1750,36 @@ window.addEventListener("load", () => {
     if (ui.statusModalText && text) {
       ui.statusModalText.textContent = text;
     }
+  };
+
+  const setConfirmModalState = (visible) => {
+    if (!ui.confirmModal) {
+      return;
+    }
+
+    ui.confirmModal.hidden = !visible;
+  };
+
+  const requestEscPassthroughConfirmation = () => new Promise((resolve) => {
+    if (!ui.confirmModal || !ui.confirmModalYesButton || !ui.confirmModalCancelButton) {
+      resolve(false);
+      return;
+    }
+
+    confirmModalResolver = resolve;
+    setConfirmModalState(true);
+    ui.confirmModalYesButton.focus();
+  });
+
+  const resolveConfirmModal = (confirmed) => {
+    if (!confirmModalResolver) {
+      return;
+    }
+
+    const resolve = confirmModalResolver;
+    confirmModalResolver = null;
+    setConfirmModalState(false);
+    resolve(confirmed);
   };
 
   const applyDisconnectedState = () => {
@@ -2093,6 +2129,19 @@ window.addEventListener("load", () => {
 
   const runEscReverseCommand = async () => {
     await sendConfigurationCommand("esc reverse", "esc");
+  };
+
+  const runEscPassthroughCommand = async () => {
+    if (ui.configEscPassthroughButton?.disabled) {
+      return;
+    }
+
+    const confirmed = await requestEscPassthroughConfirmation();
+    if (!confirmed) {
+      return;
+    }
+
+    await sendConfigurationCommand("pass", "esc");
   };
 
   const runCalibrationPointCommand = async (input, prefix) => {
@@ -2597,6 +2646,36 @@ window.addEventListener("load", () => {
   if (ui.configEscReverseButton) {
     ui.configEscReverseButton.addEventListener("click", runEscReverseCommand);
   }
+
+  if (ui.configEscPassthroughButton) {
+    ui.configEscPassthroughButton.addEventListener("click", runEscPassthroughCommand);
+  }
+
+  if (ui.confirmModalYesButton) {
+    ui.confirmModalYesButton.addEventListener("click", () => {
+      resolveConfirmModal(true);
+    });
+  }
+
+  if (ui.confirmModalCancelButton) {
+    ui.confirmModalCancelButton.addEventListener("click", () => {
+      resolveConfirmModal(false);
+    });
+  }
+
+  if (ui.confirmModal) {
+    ui.confirmModal.addEventListener("click", (event) => {
+      if (event.target === ui.confirmModal) {
+        resolveConfirmModal(false);
+      }
+    });
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !ui.confirmModal?.hidden) {
+      resolveConfirmModal(false);
+    }
+  });
 
   if (ui.configCurrentLowButton) {
     ui.configCurrentLowButton.addEventListener("click", runCurrentLowCalibrationCommand);

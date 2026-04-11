@@ -1,5 +1,6 @@
 #include "commands.h"
 
+#include "alarm_manager.h"
 #include "app_state.h"
 #include "calibration.h"
 #include "display.h"
@@ -341,6 +342,7 @@ void handleCommand(String cmd) {
     }
 
     if (cmd.equalsIgnoreCase("pass") || cmd.equalsIgnoreCase("passthrough")) {
+        logSystemEvent("ESC", "ESC passthrough mode requested. Restarting test stand.");
         requestEscPassthroughModeAndRestart();
         return;
     }

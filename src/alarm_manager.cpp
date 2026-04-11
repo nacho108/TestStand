@@ -179,6 +179,44 @@ void persistLastReadAlarmSequence() {
     preferences.end();
 }
 
+bool appendAlarmEntry(const AlarmEntry& entry) {
+    File file = LittleFS.open(kAlarmLogPath, FILE_APPEND);
+    if (!file) {
+        Serial.println("WARNING: Failed to append alarm log entry.");
+        return false;
+    }
+
+    String line;
+    line.reserve(192);
+    line += String(entry.sequence);
+    line += "\t";
+    line += String((unsigned long long)entry.timestampMs);
+    line += "\t";
+    line += sanitizeAlarmField(entry.source);
+    line += "\t";
+    line += sanitizeAlarmField(entry.severity);
+    line += "\t";
+    line += isfinite(entry.value) ? String(entry.value, 3) : "nan";
+    line += "\t";
+    line += isfinite(entry.threshold) ? String(entry.threshold, 3) : "nan";
+    line += "\t";
+    line += sanitizeAlarmField(entry.unit);
+    line += "\t";
+    line += sanitizeAlarmField(entry.message);
+    line += "\n";
+
+    const size_t written = file.print(line);
+    file.close();
+    if (written != line.length()) {
+        Serial.println("WARNING: Failed to fully write alarm log entry.");
+        return false;
+    }
+
+    latestAlarmSequence = entry.sequence;
+    pushRecentAlarm(entry);
+    return true;
+}
+
 }
 
 bool beginAlarmManager() {
@@ -218,43 +256,34 @@ void logSafetyAlarm(const char* sourceKey, SafetyLevel level, float value, float
     entry.value = value;
     entry.threshold = threshold;
     entry.unit = unit == nullptr ? "" : String(unit);
-
-    File file = LittleFS.open(kAlarmLogPath, FILE_APPEND);
-    if (!file) {
-        Serial.println("WARNING: Failed to append alarm log entry.");
+    if (!appendAlarmEntry(entry)) {
         return;
     }
-
-    String line;
-    line.reserve(192);
-    line += String(entry.sequence);
-    line += "\t";
-    line += String((unsigned long long)entry.timestampMs);
-    line += "\t";
-    line += sanitizeAlarmField(entry.source);
-    line += "\t";
-    line += sanitizeAlarmField(entry.severity);
-    line += "\t";
-    line += isfinite(entry.value) ? String(entry.value, 3) : "nan";
-    line += "\t";
-    line += isfinite(entry.threshold) ? String(entry.threshold, 3) : "nan";
-    line += "\t";
-    line += sanitizeAlarmField(entry.unit);
-    line += "\t";
-    line += sanitizeAlarmField(entry.message);
-    line += "\n";
-
-    const size_t written = file.print(line);
-    file.close();
-    if (written != line.length()) {
-        Serial.println("WARNING: Failed to fully write alarm log entry.");
-        return;
-    }
-
-    latestAlarmSequence = entry.sequence;
-    pushRecentAlarm(entry);
 
     Serial.print("ALARM: ");
+    Serial.println(entry.message);
+}
+
+void logSystemEvent(const char* source, const char* message, const char* severity) {
+    if (!alarmManagerReady || source == nullptr || message == nullptr) {
+        return;
+    }
+
+    AlarmEntry entry;
+    entry.sequence = latestAlarmSequence + 1;
+    entry.timestampMs = getCurrentTimeMs();
+    entry.source = source;
+    entry.severity = severity == nullptr ? "INFO" : String(severity);
+    entry.message = message;
+    entry.value = NAN;
+    entry.threshold = NAN;
+    entry.unit = "";
+
+    if (!appendAlarmEntry(entry)) {
+        return;
+    }
+
+    Serial.print("EVENT: ");
     Serial.println(entry.message);
 }
 

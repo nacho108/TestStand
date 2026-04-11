@@ -511,6 +511,7 @@
               </label>
             </div>
             <button class="test-button" id="config-esc-reverse-button" type="button">Reverse/normal</button>
+            <button class="test-button" id="config-esc-passthrough-button" type="button">ESC passthrough</button>
             <div class="overview-motor-controls__top-row">
               <span class="config-button-wrap" id="config-current-low-button-wrap">
                 <button class="test-button" id="config-current-low-button" type="button">Calibrate current low</button>
@@ -680,6 +681,17 @@
     </div>
   </div>
 
-  <script src="/app.js?v=26"></script>
+  <div class="status-modal" id="confirm-modal" hidden aria-modal="true" role="dialog" aria-labelledby="confirm-modal-title">
+    <div class="status-modal__panel status-modal__panel--confirm">
+      <p class="confirm-modal__eyebrow">ESC passthrough</p>
+      <h3 class="confirm-modal__title" id="confirm-modal-title">To exit this mode, the test stand should be restarted. Are you sure to continue?</h3>
+      <div class="confirm-modal__actions">
+        <button class="test-button" id="confirm-modal-yes-button" type="button">Yes</button>
+        <button class="test-button test-button--stop" id="confirm-modal-cancel-button" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=27"></script>
 </body>
 </html>
