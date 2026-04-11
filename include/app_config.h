@@ -44,6 +44,7 @@ static constexpr float DEFAULT_CURRENT_HIGH_RAW = 0.0f;
 static constexpr float DEFAULT_CURRENT_HIGH_REAL = 0.0f;
 
 static constexpr int DEFAULT_MOTOR_POLES = 28;
+static constexpr int DEFAULT_MOTOR_KV = 1020;
 static constexpr bool DEFAULT_MOTOR_TEST_COOLDOWN_ENABLED = true;
 static constexpr float MOTOR_TEST_COOLDOWN_THROTTLE_PERCENT = 30.0f;
 static constexpr unsigned long MOTOR_TEST_COOLDOWN_HOLD_MS = 10000;

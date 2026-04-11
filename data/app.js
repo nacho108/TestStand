@@ -29,6 +29,8 @@ window.addEventListener("load", () => {
     overviewMotorStopButton: document.getElementById("overview-motor-stop-button"),
     configEscPolesValue: document.getElementById("config-esc-poles-value"),
     configEscPolesButton: document.getElementById("config-esc-poles-button"),
+    configEscKvValue: document.getElementById("config-esc-kv-value"),
+    configEscKvButton: document.getElementById("config-esc-kv-button"),
     configEscReverseButton: document.getElementById("config-esc-reverse-button"),
     configCurrentLowValue: document.getElementById("config-current-low-value"),
     configCurrentLowButton: document.getElementById("config-current-low-button"),
@@ -54,6 +56,8 @@ window.addEventListener("load", () => {
     configSafetyEscTempHiButton: document.getElementById("config-safety-esc-temp-hi-button"),
     configSafetyEscTempHiHiValue: document.getElementById("config-safety-esc-temp-hihi-value"),
     configSafetyEscTempHiHiButton: document.getElementById("config-safety-esc-temp-hihi-button"),
+    statusModal: document.getElementById("status-modal"),
+    statusModalText: document.getElementById("status-modal-text"),
     testingThrottle: document.getElementById("testing-throttle-value"),
     testingThrottleHealth: document.getElementById("testing-throttle-health"),
     voltage: document.getElementById("voltage-value"),
@@ -1223,6 +1227,8 @@ window.addEventListener("load", () => {
     [
       ui.configEscPolesValue,
       ui.configEscPolesButton,
+      ui.configEscKvValue,
+      ui.configEscKvButton,
       ui.configEscReverseButton,
       ui.configCurrentLowValue,
       ui.configCurrentLowButton,
@@ -1252,6 +1258,17 @@ window.addEventListener("load", () => {
         element.disabled = disabled;
       }
     });
+  };
+
+  const setStatusModalState = (visible, text = "") => {
+    if (!ui.statusModal) {
+      return;
+    }
+
+    ui.statusModal.hidden = !visible;
+    if (ui.statusModalText && text) {
+      ui.statusModalText.textContent = text;
+    }
   };
 
   const applyDisconnectedState = () => {
@@ -1321,6 +1338,7 @@ window.addEventListener("load", () => {
     setText(ui.thrust, formatAdaptiveNumber(data.thrust_grams, "g"));
     setText(ui.thrustStdDev, `Std dev ${formatNumber(data.thrust_stddev_grams, "g", 2)}`);
     setFixedInputValueIfIdle(ui.configEscPolesValue, Number(data.motor_poles) || 0, 0);
+    setFixedInputValueIfIdle(ui.configEscKvValue, Number(data.motor_kv) || 0, 0);
     if (ui.configScaleFactorValue) {
       ui.configScaleFactorValue.value = Number.isFinite(Number(data.scale_calibration_factor))
         ? Number(data.scale_calibration_factor).toFixed(6)
@@ -1499,13 +1517,14 @@ window.addEventListener("load", () => {
     }
   };
 
-  const sendConfigurationCommand = async (command) => {
+  const sendConfigurationCommand = async (command, writeTarget = "esp") => {
     if (configurationCommandPending) {
       return false;
     }
 
     configurationCommandPending = true;
     setConfigurationControlsState(true);
+    setStatusModalState(true, writeTarget === "esc" ? "Writing to ESC" : "Writing to ESP");
 
     try {
       const body = new URLSearchParams({ cmd: command });
@@ -1526,6 +1545,7 @@ window.addEventListener("load", () => {
     } catch (error) {
       return false;
     } finally {
+      setStatusModalState(false);
       configurationCommandPending = false;
       setConfigurationControlsState(false);
     }
@@ -1564,11 +1584,26 @@ window.addEventListener("load", () => {
     }
 
     ui.configEscPolesValue.value = `${targetValue}`;
-    await sendConfigurationCommand(`esc poles ${targetValue}`);
+    await sendConfigurationCommand(`esc poles ${targetValue}`, "esc");
+  };
+
+  const runEscKvCommand = async () => {
+    if (!ui.configEscKvValue) {
+      return;
+    }
+
+    const targetValue = Number(ui.configEscKvValue.value);
+    if (!Number.isInteger(targetValue) || targetValue < 20 || targetValue > 10220) {
+      ui.configEscKvValue.focus();
+      return;
+    }
+
+    ui.configEscKvValue.value = `${targetValue}`;
+    await sendConfigurationCommand(`esc kv ${targetValue}`, "esc");
   };
 
   const runEscReverseCommand = async () => {
-    await sendConfigurationCommand("esc reverse");
+    await sendConfigurationCommand("esc reverse", "esc");
   };
 
   const runCalibrationPointCommand = async (input, prefix) => {
@@ -1970,6 +2005,19 @@ window.addEventListener("load", () => {
       if (event.key === "Enter") {
         event.preventDefault();
         runEscPolesCommand();
+      }
+    });
+  }
+
+  if (ui.configEscKvButton) {
+    ui.configEscKvButton.addEventListener("click", runEscKvCommand);
+  }
+
+  if (ui.configEscKvValue) {
+    ui.configEscKvValue.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        runEscKvCommand();
       }
     });
   }

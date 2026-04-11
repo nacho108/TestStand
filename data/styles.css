@@ -166,6 +166,61 @@ body::before {
   padding: 18px 20px 22px;
 }
 
+.status-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 35, 57, 0.32);
+  backdrop-filter: blur(5px);
+}
+
+.status-modal[hidden] {
+  display: none;
+}
+
+.status-modal__panel {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  min-width: min(100%, 240px);
+  padding: 22px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 8px;
+  background: rgba(248, 251, 255, 0.96);
+  box-shadow: 0 18px 42px rgba(17, 34, 63, 0.2);
+}
+
+.status-modal__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(22, 57, 85, 0.18);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: status-modal-spin 0.85s linear infinite;
+}
+
+.status-modal__text {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+@keyframes status-modal-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .view-header h2 {
   font-size: 1rem;
   color: var(--ink-soft);

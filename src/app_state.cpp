@@ -23,6 +23,7 @@ float throttlePercent = 0.0f;
 bool motorOutputAuthorized = false;
 bool motorOutputRevokeWhenIdle = false;
 int motorPoleCount = DEFAULT_MOTOR_POLES;
+int motorKv = DEFAULT_MOTOR_KV;
 bool telemetryStreaming = false;
 bool promptShown = false;
 bool lastConsoleCharWasCarriageReturn = false;

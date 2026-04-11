@@ -12,6 +12,7 @@ namespace {
 constexpr unsigned long ESC_BOOTLOADER_BAUD = 19200;
 const char* PASSTHROUGH_PREF_KEY = "pt_once";
 const char* MOTOR_POLES_PREF_KEY = "motor_poles";
+const char* MOTOR_KV_PREF_KEY = "motor_kv";
 
 EspSoftwareSerial::UART escPassthroughSerial;
 bool enable4Way = false;
@@ -125,6 +126,12 @@ int decodeLegacyEscMotorKv(uint8_t raw) {
 void saveMotorPoleCount() {
     preferences.begin("am32cli", false);
     preferences.putInt(MOTOR_POLES_PREF_KEY, motorPoleCount);
+    preferences.end();
+}
+
+void saveMotorKv() {
+    preferences.begin("am32cli", false);
+    preferences.putInt(MOTOR_KV_PREF_KEY, motorKv);
     preferences.end();
 }
 
@@ -1189,9 +1196,11 @@ void requestEscPassthroughModeAndRestart() {
 void loadMotorPoleCount() {
     preferences.begin("am32cli", true);
     const int storedValue = preferences.getInt(MOTOR_POLES_PREF_KEY, DEFAULT_MOTOR_POLES);
+    const int storedMotorKv = preferences.getInt(MOTOR_KV_PREF_KEY, DEFAULT_MOTOR_KV);
     preferences.end();
 
     motorPoleCount = isValidMotorPoleCount(storedValue) ? storedValue : DEFAULT_MOTOR_POLES;
+    motorKv = isValidEscMotorKv(storedMotorKv) ? storedMotorKv : DEFAULT_MOTOR_KV;
 }
 
 void printMotorPoleCount() {
@@ -1692,7 +1701,9 @@ void setEscMotorKv(int motorKv) {
         }
 
         Serial.print("ESC kv: motor_kv_estimate updated successfully to ");
-        Serial.println(decodeLegacyEscMotorKv(verifyRaw));
+        motorKv = decodeLegacyEscMotorKv(verifyRaw);
+        saveMotorKv();
+        Serial.println(motorKv);
     } while (false);
 
     if (shouldResetEsc) {

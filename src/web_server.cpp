@@ -582,6 +582,7 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonBool(json, "motor_test_cooling_enabled", isMotorTestCooldownEnabled());
     appendJsonBool(json, "motor_test_pusher_mode", isMotorTestPusherMode());
     appendJsonUnsigned(json, "motor_poles", (unsigned long)motorPoleCount);
+    appendJsonUnsigned(json, "motor_kv", (unsigned long)motorKv);
     appendJsonFloat(json, "scale_calibration_factor", getCurrentScaleCalibrationFactor(), 6);
     appendJsonFloat(json, "safety_current_hi_a", safetyConfig.currentA.hi, 3);
     appendJsonFloat(json, "safety_current_hihi_a", safetyConfig.currentA.hihi, 3);

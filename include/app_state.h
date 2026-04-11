@@ -32,6 +32,7 @@ extern float throttlePercent;
 extern bool motorOutputAuthorized;
 extern bool motorOutputRevokeWhenIdle;
 extern int motorPoleCount;
+extern int motorKv;
 extern bool telemetryStreaming;
 extern bool promptShown;
 extern bool lastConsoleCharWasCarriageReturn;

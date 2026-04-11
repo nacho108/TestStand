@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>TestStand Dashboard</title>
-  <link rel="stylesheet" href="/styles.css?v=24">
+  <link rel="stylesheet" href="/styles.css?v=25">
 </head>
 <body>
   <div class="dashboard-shell">
@@ -491,6 +491,14 @@
                 </div>
               </label>
             </div>
+            <div class="overview-motor-controls__top-row">
+              <button class="test-button" id="config-esc-kv-button" type="button">Change Motor kv</button>
+              <label class="overview-motor-controls__field" for="config-esc-kv-value">
+                <div class="overview-motor-controls__input-wrap">
+                  <input id="config-esc-kv-value" type="number" min="20" max="10220" step="40" value="1020">
+                </div>
+              </label>
+            </div>
             <button class="test-button" id="config-esc-reverse-button" type="button">Reverse/normal</button>
             <div class="overview-motor-controls__top-row">
               <button class="test-button" id="config-current-low-button" type="button">Calibrate current low</button>
@@ -623,6 +631,13 @@
     </main>
   </div>
 
-  <script src="/app.js?v=24"></script>
+  <div class="status-modal" id="status-modal" hidden aria-live="polite" aria-busy="true">
+    <div class="status-modal__panel">
+      <div class="status-modal__spinner" aria-hidden="true"></div>
+      <p class="status-modal__text" id="status-modal-text">Writing to ESC</p>
+    </div>
+  </div>
+
+  <script src="/app.js?v=25"></script>
 </body>
 </html>
