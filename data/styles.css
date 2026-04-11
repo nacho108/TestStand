@@ -872,6 +872,58 @@ body::before {
   opacity: 0.92;
 }
 
+.chart-marker-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.chart-marker {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--marker-color, #244d74);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.chart-marker::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translate(-50%, -50%);
+}
+
+.chart-tooltip {
+  --tooltip-accent: #244d74;
+  position: absolute;
+  z-index: 3;
+  min-width: 86px;
+  padding: 6px 8px;
+  border: 1px solid var(--tooltip-accent);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 18px rgba(26, 40, 76, 0.16);
+  color: var(--ink);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.35;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.chart-tooltip__line {
+  color: var(--ink);
+}
+
+.chart-tooltip__line--y {
+  color: var(--tooltip-accent);
+}
+
 .chart-line path,
 .chart-study-line path {
   vector-effect: non-scaling-stroke;

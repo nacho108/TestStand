@@ -81,13 +81,21 @@ window.addEventListener("load", () => {
 
   const chartContexts = {
     testing: {
+      plot: document.querySelector('[data-view-pane="testing"] .chart-plot--testing'),
       thrustPath: document.getElementById("testing-chart-thrust-path"),
+      thrustLayer: document.getElementById("testing-chart-thrust-path")?.closest(".chart-line-layer") || null,
       efficiencyPath: document.getElementById("testing-chart-efficiency-path"),
+      efficiencyLayer: document.getElementById("testing-chart-efficiency-path")?.closest(".chart-line-layer") || null,
       voltagePath: document.getElementById("testing-chart-voltage-path"),
+      voltageLayer: document.getElementById("testing-chart-voltage-path")?.closest(".chart-line-layer") || null,
       powerPath: document.getElementById("testing-chart-power-path"),
+      powerLayer: document.getElementById("testing-chart-power-path")?.closest(".chart-line-layer") || null,
       currentPath: document.getElementById("testing-chart-current-path"),
+      currentLayer: document.getElementById("testing-chart-current-path")?.closest(".chart-line-layer") || null,
       rpmPath: document.getElementById("testing-chart-rpm-path"),
+      rpmLayer: document.getElementById("testing-chart-rpm-path")?.closest(".chart-line-layer") || null,
       tempPath: document.getElementById("testing-chart-temp-path"),
+      tempLayer: document.getElementById("testing-chart-temp-path")?.closest(".chart-line-layer") || null,
       leftVoltageTicks: [
         document.getElementById("testing-chart-left-top-voltage"),
         document.getElementById("testing-chart-left-upper-mid-voltage"),
@@ -139,6 +147,7 @@ window.addEventListener("load", () => {
       ]
     },
     study: {
+      plot: document.querySelector('[data-view-pane="study"] .chart-plot--study'),
       thrustLayer: document.getElementById("study-chart-thrust-layer"),
       efficiencyLayer: document.getElementById("study-chart-efficiency-layer"),
       voltageLayer: document.getElementById("study-chart-voltage-layer"),
@@ -266,6 +275,21 @@ window.addEventListener("load", () => {
   const normalizeChartRows = (rows) => Array.isArray(rows)
     ? rows.map((row) => normalizeChartRow(row))
     : [];
+
+  const chartSeriesMeta = {
+    thrust: { valueKey: "thrust_grams", unit: "g", digits: 0, color: "#244d74", className: "chart-line--thrust" },
+    efficiency: { valueKey: "thrust_efficiency_g_per_w", unit: "gr/W", digits: 2, color: "#b06a00", className: "chart-line--efficiency" },
+    voltage: { valueKey: "voltage_v", unit: "V", digits: 2, color: "#8a4fff", className: "chart-line--voltage" },
+    power: { valueKey: "power_w", unit: "W", digits: 0, color: "#546fe5", className: "chart-line--power" },
+    current: { valueKey: "current_a", unit: "A", digits: 2, color: "#1aa36f", className: "chart-line--current" },
+    rpm: { valueKey: "rpm", unit: "rpm", digits: 0, color: "#d94141", className: "chart-line--rpm" },
+    temp: { valueKey: "motor_temperature_c", unit: "C", digits: 1, color: "#ff7c5c", className: "chart-line--temp" }
+  };
+
+  const chartXAxisMeta = {
+    throttle_percent: { unit: "%", digits: 0 },
+    thrust_grams: { unit: "g", digits: 0 }
+  };
 
   const calculateAverageEfficiencyForThrottleBand = (rows, minThrottle = 40, maxThrottle = 80) => {
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -625,13 +649,45 @@ window.addEventListener("load", () => {
     .replaceAll("\"", "&quot;")
     .replaceAll("'", "&#39;");
 
-  const buildChartPath = (rows, valueKey, xKey = "throttle_percent", axisMax = {}) => {
+  const formatTooltipValue = (value, unit, digits = 0) => {
+    if (!Number.isFinite(value)) {
+      return "--";
+    }
+
+    return `${Number(value).toFixed(digits)} ${unit}`;
+  };
+
+  const projectChartPoint = (point, axisMax) => {
+    const safeMinX = Number.isFinite(axisMax.minX) ? axisMax.minX : 0;
+    const safeMaxX = Number.isFinite(axisMax.maxX) ? axisMax.maxX : 1;
+    const safeMinY = Number.isFinite(axisMax.minY) ? axisMax.minY : 0;
+    const safeMaxY = Number.isFinite(axisMax.maxY) ? axisMax.maxY : 1;
+    const xSpan = safeMaxX !== safeMinX ? (safeMaxX - safeMinX) : 1;
+    const ySpan = safeMaxY !== safeMinY ? (safeMaxY - safeMinY) : 1;
+    const plotPaddingX = 1.5;
+    const plotPaddingY = 1.5;
+    const plotWidth = 100 - plotPaddingX * 2;
+    const plotHeight = 100 - plotPaddingY * 2;
+    const px = plotPaddingX + ((point.x - safeMinX) / xSpan) * plotWidth;
+    const py = 100 - plotPaddingY - ((point.y - safeMinY) / ySpan) * plotHeight;
+
+    return {
+      ...point,
+      px: Math.max(0, Math.min(100, px)),
+      py: Math.max(0, Math.min(100, py))
+    };
+  };
+
+  const buildChartGeometry = (rows, valueKey, xKey = "throttle_percent", axisMax = {}) => {
     if (!Array.isArray(rows) || rows.length === 0) {
-      return "M0,100 L100,100";
+      return {
+        path: "M0,100 L100,100",
+        points: []
+      };
     }
 
     const points = rows
-      .map((row) => {
+      .map((row, index) => {
         const x = Number(row?.[xKey]);
         const y = Number(row?.[valueKey]);
         if (!Number.isFinite(x)) {
@@ -639,28 +695,34 @@ window.addEventListener("load", () => {
         }
 
         return {
+          index,
           x,
-          y: Number.isFinite(y) ? y : 0
+          y: Number.isFinite(y) ? y : 0,
+          isRenderable: Number.isFinite(y)
         };
       })
       .filter(Boolean);
 
     if (points.length === 0) {
-      return "M0,100 L100,100";
+      return {
+        path: "M0,100 L100,100",
+        points: []
+      };
     }
 
-    const hasOriginPoint = points.some((point) => point.x === 0);
+    const linePoints = [...points];
+    const hasOriginPoint = linePoints.some((point) => point.x === 0);
     if (!hasOriginPoint) {
-      points.push({ x: 0, y: 0 });
+      linePoints.push({ index: -1, x: 0, y: 0, isRenderable: false });
     }
 
-    points.sort((a, b) => a.x - b.x);
+    linePoints.sort((a, b) => a.x - b.x);
 
-    const derivedXRange = points.reduce((range, point) => ({
+    const derivedXRange = linePoints.reduce((range, point) => ({
       min: Math.min(range.min, point.x),
       max: Math.max(range.max, point.x)
     }), { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY });
-    const derivedYRange = points.reduce((range, point) => ({
+    const derivedYRange = linePoints.reduce((range, point) => ({
       min: Math.min(range.min, point.y),
       max: Math.max(range.max, point.y)
     }), { min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY });
@@ -668,22 +730,153 @@ window.addEventListener("load", () => {
     const safeMaxX = Number.isFinite(axisMax.maxX) ? axisMax.maxX : (Number.isFinite(derivedXRange.max) ? derivedXRange.max : 1);
     const safeMinY = Number.isFinite(axisMax.minY) ? axisMax.minY : (Number.isFinite(derivedYRange.min) ? derivedYRange.min : 0);
     const safeMaxY = Number.isFinite(axisMax.maxY) ? axisMax.maxY : (Number.isFinite(derivedYRange.max) ? derivedYRange.max : 1);
-    const xSpan = safeMaxX !== safeMinX ? (safeMaxX - safeMinX) : 1;
-    const ySpan = safeMaxY !== safeMinY ? (safeMaxY - safeMinY) : 1;
-    const plotPaddingX = 1.5;
-    const plotPaddingY = 1.5;
-    const plotWidth = 100 - plotPaddingX * 2;
-    const plotHeight = 100 - plotPaddingY * 2;
-
-    return points
+    const bounds = {
+      minX: safeMinX,
+      maxX: safeMaxX,
+      minY: safeMinY,
+      maxY: safeMaxY
+    };
+    const path = linePoints
+      .map((point, index) => projectChartPoint(point, bounds))
       .map((point, index) => {
-        const px = plotPaddingX + ((point.x - safeMinX) / xSpan) * plotWidth;
-        const py = 100 - plotPaddingY - ((point.y - safeMinY) / ySpan) * plotHeight;
-        const clampedX = Math.max(0, Math.min(100, px));
-        const clampedY = Math.max(0, Math.min(100, py));
-        return `${index === 0 ? "M" : "L"}${clampedX.toFixed(2)},${clampedY.toFixed(2)}`;
+        return `${index === 0 ? "M" : "L"}${point.px.toFixed(2)},${point.py.toFixed(2)}`;
       })
       .join(" ");
+    const markerPoints = points
+      .filter((point) => point.isRenderable)
+      .sort((a, b) => a.x - b.x)
+      .map((point) => projectChartPoint(point, bounds));
+
+    return {
+      path,
+      points: markerPoints
+    };
+  };
+
+  const buildMarkerMarkup = (points, seriesMeta, xKey) => {
+    const xMeta = chartXAxisMeta[xKey] || chartXAxisMeta.throttle_percent;
+    return points
+      .map((point, index) => {
+        const xLabel = formatTooltipValue(point.x, xMeta.unit, xMeta.digits);
+        const yLabel = formatTooltipValue(point.y, seriesMeta.unit, seriesMeta.digits);
+        return `<span class="chart-marker" data-tooltip-x="${escapeHtml(xLabel)}" data-tooltip-y="${escapeHtml(yLabel)}" data-tooltip-color="${escapeHtml(seriesMeta.color)}" style="left:${point.px.toFixed(2)}%;top:${point.py.toFixed(2)}%;--marker-color:${seriesMeta.color}" aria-hidden="true"></span>`;
+      })
+      .join(" ");
+  };
+
+  const buildMarkerOverlayMarkup = (markerMarkup = "") => `
+    <div class="chart-marker-overlay">
+      ${markerMarkup}
+      <div class="chart-tooltip" hidden>
+        <div class="chart-tooltip__line chart-tooltip__line--x"></div>
+        <div class="chart-tooltip__line chart-tooltip__line--y"></div>
+      </div>
+    </div>
+  `;
+
+  const renderLayerMarkers = (layerElement, points, seriesMeta, xKey) => {
+    if (!layerElement) {
+      return;
+    }
+
+    layerElement.querySelector(".chart-marker-overlay")?.remove();
+    layerElement.insertAdjacentHTML("beforeend", buildMarkerOverlayMarkup(buildMarkerMarkup(points, seriesMeta, xKey)));
+  };
+
+  const hideChartTooltip = (overlay) => {
+    const tooltip = overlay?.querySelector(".chart-tooltip");
+    if (!tooltip) {
+      return;
+    }
+
+    tooltip.hidden = true;
+    tooltip.classList.remove("chart-tooltip--visible");
+  };
+
+  const positionChartTooltip = (marker) => {
+    const overlay = marker.closest(".chart-marker-overlay");
+    const tooltip = overlay?.querySelector(".chart-tooltip");
+    if (!overlay || !tooltip) {
+      return;
+    }
+
+    const xLine = tooltip.querySelector(".chart-tooltip__line--x");
+    const yLine = tooltip.querySelector(".chart-tooltip__line--y");
+    if (xLine) {
+      xLine.textContent = `X: ${marker.dataset.tooltipX || "--"}`;
+    }
+    if (yLine) {
+      yLine.textContent = `Y: ${marker.dataset.tooltipY || "--"}`;
+    }
+
+    tooltip.style.setProperty("--tooltip-accent", marker.dataset.tooltipColor || "#244d74");
+    tooltip.hidden = false;
+    tooltip.classList.add("chart-tooltip--visible");
+
+    const markerCenterX = marker.offsetLeft + (marker.offsetWidth / 2);
+    const markerCenterY = marker.offsetTop + (marker.offsetHeight / 2);
+    let left = markerCenterX + 8;
+    let top = markerCenterY - tooltip.offsetHeight - 8;
+
+    if (left + tooltip.offsetWidth > overlay.clientWidth - 4) {
+      left = markerCenterX - tooltip.offsetWidth - 8;
+    }
+    if (left < 4) {
+      left = 4;
+    }
+    if (top < 4) {
+      top = markerCenterY + 8;
+    }
+    if (top + tooltip.offsetHeight > overlay.clientHeight - 4) {
+      top = Math.max(4, overlay.clientHeight - tooltip.offsetHeight - 4);
+    }
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+  };
+
+  const hideAllChartTooltips = (plotElement) => {
+    plotElement?.querySelectorAll(".chart-marker-overlay").forEach((overlay) => {
+      hideChartTooltip(overlay);
+    });
+  };
+
+  const initializeChartMarkerInteractions = (plotElement) => {
+    if (!plotElement || plotElement.dataset.chartMarkerInteractions === "ready") {
+      return;
+    }
+
+    plotElement.dataset.chartMarkerInteractions = "ready";
+    plotElement.addEventListener("mouseover", (event) => {
+      const marker = event.target.closest(".chart-marker");
+      if (!marker || !plotElement.contains(marker)) {
+        return;
+      }
+
+      positionChartTooltip(marker);
+    });
+
+    plotElement.addEventListener("mousemove", (event) => {
+      const marker = event.target.closest(".chart-marker");
+      if (!marker || !plotElement.contains(marker)) {
+        return;
+      }
+
+      positionChartTooltip(marker);
+    });
+
+    plotElement.addEventListener("mouseout", (event) => {
+      const marker = event.target.closest(".chart-marker");
+      if (!marker || !plotElement.contains(marker)) {
+        return;
+      }
+
+      hideChartTooltip(marker.closest(".chart-marker-overlay"));
+    });
+
+    plotElement.addEventListener("mouseleave", () => {
+      hideAllChartTooltips(plotElement);
+    });
   };
 
   const getChartAxisBounds = (rows, xAxisKey) => {
@@ -719,82 +912,104 @@ window.addEventListener("load", () => {
     const axisBounds = getChartAxisBounds(rows, xAxisKey);
 
     if (context.thrustPath) {
-      context.thrustPath.setAttribute("d", buildChartPath(rows, "thrust_grams", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.thrust.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.thrust.min,
         maxY: axisBounds.thrust.max
-      }));
+      });
+      context.thrustPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.thrustLayer, geometry.points, chartSeriesMeta.thrust, xAxisKey);
       context.thrustPath.parentElement.style.display = hideThrustSeries || visibleSeries.thrust === false ? "none" : "";
     }
 
     if (context.efficiencyPath) {
-      context.efficiencyPath.setAttribute("d", buildChartPath(rows, "thrust_efficiency_g_per_w", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.efficiency.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.efficiency.min,
         maxY: axisBounds.efficiency.max
-      }));
+      });
+      context.efficiencyPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.efficiencyLayer, geometry.points, chartSeriesMeta.efficiency, xAxisKey);
       context.efficiencyPath.parentElement.style.display = visibleSeries.efficiency === false ? "none" : "";
     }
 
     if (context.voltagePath) {
-      context.voltagePath.setAttribute("d", buildChartPath(rows, "voltage_v", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.voltage.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.voltage.min,
         maxY: axisBounds.voltage.max
-      }));
+      });
+      context.voltagePath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.voltageLayer, geometry.points, chartSeriesMeta.voltage, xAxisKey);
       context.voltagePath.parentElement.style.display = visibleSeries.voltage === false ? "none" : "";
     }
 
     if (context.powerPath) {
-      context.powerPath.setAttribute("d", buildChartPath(rows, "power_w", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.power.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.power.min,
         maxY: axisBounds.power.max
-      }));
+      });
+      context.powerPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.powerLayer, geometry.points, chartSeriesMeta.power, xAxisKey);
       context.powerPath.parentElement.style.display = visibleSeries.power === false ? "none" : "";
     }
 
     if (context.currentPath) {
-      context.currentPath.setAttribute("d", buildChartPath(rows, "current_a", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.current.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.current.min,
         maxY: axisBounds.current.max
-      }));
+      });
+      context.currentPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.currentLayer, geometry.points, chartSeriesMeta.current, xAxisKey);
       context.currentPath.parentElement.style.display = visibleSeries.current === false ? "none" : "";
     }
 
     if (context.rpmPath) {
-      context.rpmPath.setAttribute("d", buildChartPath(rows, "rpm", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.rpm.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.rpm.min,
         maxY: axisBounds.rpm.max
-      }));
+      });
+      context.rpmPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.rpmLayer, geometry.points, chartSeriesMeta.rpm, xAxisKey);
       context.rpmPath.parentElement.style.display = visibleSeries.rpm === false ? "none" : "";
     }
 
     if (context.tempPath) {
-      context.tempPath.setAttribute("d", buildChartPath(rows, "motor_temperature_c", xAxisKey, {
+      const geometry = buildChartGeometry(rows, chartSeriesMeta.temp.valueKey, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.temp.min,
         maxY: axisBounds.temp.max
-      }));
+      });
+      context.tempPath.setAttribute("d", geometry.path);
+      renderLayerMarkers(context.tempLayer, geometry.points, chartSeriesMeta.temp, xAxisKey);
       context.tempPath.parentElement.style.display = visibleSeries.temp === false ? "none" : "";
     }
   };
 
-  const buildStudyLayerMarkup = (datasets, valueKey, xKey, className, axisMax) => datasets
-    .map((dataset) => {
+  const buildStudyLayerMarkup = (datasets, seriesMeta, xKey, axisMax) => {
+    const markers = [];
+    const lines = datasets.map((dataset) => {
       const hidden = dataset.visible === false ? " style=\"display:none\"" : "";
-      return `<svg class="chart-study-line ${className}" viewBox="0 0 100 100" preserveAspectRatio="none" data-study-dataset-id="${escapeHtml(dataset.id)}"${hidden}><path d="${escapeHtml(buildChartPath(dataset.rows, valueKey, xKey, axisMax))}"></path></svg>`;
-    })
-    .join("");
+      const geometry = buildChartGeometry(dataset.rows, seriesMeta.valueKey, xKey, axisMax);
+      if (dataset.visible !== false) {
+        markers.push(buildMarkerMarkup(geometry.points, seriesMeta, xKey));
+      }
+
+      return `<svg class="chart-study-line ${seriesMeta.className}" viewBox="0 0 100 100" preserveAspectRatio="none" data-study-dataset-id="${escapeHtml(dataset.id)}"${hidden}><path d="${escapeHtml(geometry.path)}"></path></svg>`;
+    }).join("");
+
+    return `${lines}${buildMarkerOverlayMarkup(markers.join(""))}`;
+  };
 
   const renderStudyFileControls = () => {
     if (!ui.studyFileVisibilityList || !ui.studyFileVisibilityEmpty) {
@@ -866,7 +1081,7 @@ window.addEventListener("load", () => {
     const axisBounds = getChartAxisBounds(rows, xAxisKey);
 
     if (context.thrustLayer) {
-      context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_grams", xAxisKey, "chart-line--thrust", {
+      context.thrustLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.thrust, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.thrust.min,
@@ -876,7 +1091,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.efficiencyLayer) {
-      context.efficiencyLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "thrust_efficiency_g_per_w", xAxisKey, "chart-line--efficiency", {
+      context.efficiencyLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.efficiency, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.efficiency.min,
@@ -886,7 +1101,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.voltageLayer) {
-      context.voltageLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "voltage_v", xAxisKey, "chart-line--voltage", {
+      context.voltageLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.voltage, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.voltage.min,
@@ -896,7 +1111,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.powerLayer) {
-      context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "power_w", xAxisKey, "chart-line--power", {
+      context.powerLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.power, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.power.min,
@@ -906,7 +1121,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.currentLayer) {
-      context.currentLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "current_a", xAxisKey, "chart-line--current", {
+      context.currentLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.current, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.current.min,
@@ -916,7 +1131,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.rpmLayer) {
-      context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "rpm", xAxisKey, "chart-line--rpm", {
+      context.rpmLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.rpm, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.rpm.min,
@@ -926,7 +1141,7 @@ window.addEventListener("load", () => {
     }
 
     if (context.tempLayer) {
-      context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, "motor_temperature_c", xAxisKey, "chart-line--temp", {
+      context.tempLayer.innerHTML = buildStudyLayerMarkup(studyDatasets, chartSeriesMeta.temp, xAxisKey, {
         minX: axisBounds.x.min,
         maxX: axisBounds.x.max,
         minY: axisBounds.temp.min,
@@ -2110,6 +2325,9 @@ window.addEventListener("load", () => {
       });
     });
   }
+
+  initializeChartMarkerInteractions(chartContexts.testing.plot);
+  initializeChartMarkerInteractions(chartContexts.study.plot);
 });
 
 
