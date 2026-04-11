@@ -245,11 +245,11 @@ body::before {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 55px;
+  height: 55px;
   padding: 0;
   border: 1px solid rgba(73, 92, 124, 0.16);
-  border-radius: 14px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.84);
   box-shadow: 0 12px 28px rgba(28, 44, 77, 0.12);
   color: #8b98ae;
@@ -270,14 +270,14 @@ body::before {
 }
 
 .alarm-button--alert {
-  color: #d63d4e;
-  background: rgba(255, 246, 247, 0.98);
+  color: #ff2540;
+  background: rgba(255, 238, 241, 1);
   animation: alarm-button-blink 1s ease-in-out infinite;
 }
 
 .alarm-button__icon {
-  width: 22px;
-  height: 22px;
+  width: 36px;
+  height: 36px;
   fill: currentColor;
 }
 
@@ -405,13 +405,13 @@ body::before {
 @keyframes alarm-button-blink {
   0%,
   100% {
-    background: rgba(255, 246, 247, 0.98);
-    box-shadow: 0 16px 34px rgba(28, 44, 77, 0.18);
+    background: rgba(255, 238, 241, 1);
+    box-shadow: 0 18px 36px rgba(28, 44, 77, 0.2);
   }
 
   50% {
-    background: rgba(255, 224, 228, 0.98);
-    box-shadow: 0 18px 36px rgba(214, 61, 78, 0.26);
+    background: rgba(255, 120, 138, 1);
+    box-shadow: 0 0 0 3px rgba(255, 78, 106, 0.2), 0 22px 42px rgba(255, 56, 88, 0.42);
   }
 }
 
