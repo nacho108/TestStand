@@ -17,6 +17,7 @@
 #include "ir_manager.h"
 #include "scale_manager.h"
 #include "safety_manager.h"
+#include "time_sync.h"
 #include "app_config.h"
 #include "test_runner.h"
 
@@ -606,6 +607,7 @@ String buildStatusJson(bool includeTestResults = true) {
     appendJsonString(json, "safety_esc_temp_state", String(safetyLevelToString(safetyStatus.escTemperatureLevel)));
     appendJsonBool(json, "safety_trip_active", safetyStatus.tripActive);
     appendJsonString(json, "safety_trip_reason", safetyStatus.tripReason);
+    appendJsonBool(json, "time_synced", hasCurrentTimeSync());
     appendJsonUnsigned(json, "alarm_unread_count", (unsigned long)getUnreadAlarmCount());
     appendJsonUnsigned(json, "alarm_total_count", (unsigned long)getTotalAlarmCount());
     appendJsonRaw(json, "recent_alarms", buildRecentAlarmsJson(10));
@@ -788,6 +790,23 @@ bool beginWebServer() {
 
     server.on("/api/alarms/read", HTTP_POST, [](AsyncWebServerRequest* request) {
         markAllAlarmsRead();
+        request->send(200, "application/json", "{\"ok\":true}");
+    });
+
+    server.on("/api/time/sync", HTTP_POST, [](AsyncWebServerRequest* request) {
+        if (!request->hasParam("epoch_ms", true)) {
+            request->send(400, "application/json", "{\"ok\":false,\"error\":\"Missing epoch_ms\"}");
+            return;
+        }
+
+        const String epochText = request->getParam("epoch_ms", true)->value();
+        const uint64_t epochMs = strtoull(epochText.c_str(), nullptr, 10);
+        if (epochMs == 0) {
+            request->send(400, "application/json", "{\"ok\":false,\"error\":\"Invalid epoch_ms\"}");
+            return;
+        }
+
+        setCurrentTimeFromEpochMs(epochMs);
         request->send(200, "application/json", "{\"ok\":true}");
     });
 

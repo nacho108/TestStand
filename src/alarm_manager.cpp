@@ -4,6 +4,7 @@
 #include <math.h>
 
 #include "app_state.h"
+#include "time_sync.h"
 
 namespace {
 
@@ -122,7 +123,7 @@ bool parseAlarmLine(const String& line, AlarmEntry& outEntry) {
     }
 
     outEntry.sequence = strtoul(line.substring(0, separators[0]).c_str(), nullptr, 10);
-    outEntry.timestampMs = strtoul(
+    outEntry.timestampMs = strtoull(
         line.substring(separators[0] + 1, separators[1]).c_str(),
         nullptr,
         10
@@ -210,7 +211,7 @@ void logSafetyAlarm(const char* sourceKey, SafetyLevel level, float value, float
 
     AlarmEntry entry;
     entry.sequence = latestAlarmSequence + 1;
-    entry.timestampMs = millis();
+    entry.timestampMs = getCurrentTimeMs();
     entry.source = makeSourceLabel(sourceKey);
     entry.severity = makeSeverityLabel(level);
     entry.message = makeAlarmMessage(entry.source, entry.severity, value, threshold, unit);
@@ -228,7 +229,7 @@ void logSafetyAlarm(const char* sourceKey, SafetyLevel level, float value, float
     line.reserve(192);
     line += String(entry.sequence);
     line += "\t";
-    line += String(entry.timestampMs);
+    line += String((unsigned long long)entry.timestampMs);
     line += "\t";
     line += sanitizeAlarmField(entry.source);
     line += "\t";
@@ -287,7 +288,7 @@ String buildRecentAlarmsJson(size_t limit) {
         json += "\"sequence\":";
         json += String(entry.sequence);
         json += ",\"timestamp_ms\":";
-        json += String(entry.timestampMs);
+        json += String((unsigned long long)entry.timestampMs);
         json += ",\"source\":\"";
         json += jsonEscape(entry.source);
         json += "\",\"severity\":\"";

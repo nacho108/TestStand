@@ -60,7 +60,7 @@ struct SafetyStatus {
 
 struct AlarmEntry {
     unsigned long sequence = 0;
-    unsigned long timestampMs = 0;
+    uint64_t timestampMs = 0;
     String source;
     String severity;
     String message;

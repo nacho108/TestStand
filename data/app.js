@@ -274,6 +274,8 @@ window.addEventListener("load", () => {
   let alarmTotalCount = 0;
   let locallyViewedAlarmTotalCount = 0;
   let recentAlarms = [];
+  let timeSyncTimer = null;
+  let timeSynced = false;
   const safetyHighlightDurationMs = 2000;
   const safetyHighlightTimers = new Map();
 
@@ -704,10 +706,21 @@ window.addEventListener("load", () => {
     .replaceAll("'", "&#39;");
 
   const formatAlarmTime = (timestampMs) => {
-    const ageSeconds = Math.max(
-      0,
-      Math.round(((Date.now() - performance.timeOrigin) - (Number(timestampMs) || 0)) / 1000)
-    );
+    const numericTimestamp = Number(timestampMs) || 0;
+    if (numericTimestamp <= 0) {
+      return "Unsynced";
+    }
+
+    if (timeSynced && numericTimestamp > 1000000000000) {
+      const alarmDate = new Date(numericTimestamp);
+      const now = new Date();
+      const isSameDay = alarmDate.toDateString() === now.toDateString();
+      return isSameDay
+        ? alarmDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+        : `${alarmDate.toLocaleDateString()} ${alarmDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    }
+
+    const ageSeconds = Math.max(0, Math.round(((Date.now() - performance.timeOrigin) - numericTimestamp) / 1000));
     const hours = Math.floor(ageSeconds / 3600);
     const minutes = Math.floor((ageSeconds % 3600) / 60);
     const seconds = ageSeconds % 60;
@@ -806,6 +819,7 @@ window.addEventListener("load", () => {
   };
 
   const applyAlarmStatus = (data) => {
+    timeSynced = Boolean(data.time_synced);
     const nextTotalCount = Number(data.alarm_total_count) || 0;
     const serverUnreadCount = Number(data.alarm_unread_count) || 0;
     const nextRecentAlarms = Array.isArray(data.recent_alarms) ? data.recent_alarms : [];
@@ -819,6 +833,35 @@ window.addEventListener("load", () => {
     recentAlarms = nextRecentAlarms;
     renderAlarmList(recentAlarms);
     renderAlarmBell();
+  };
+
+  const syncEspTime = async () => {
+    try {
+      const body = new URLSearchParams({
+        epoch_ms: `${Date.now()}`
+      });
+      const response = await fetch("/api/time/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"
+        },
+        body
+      });
+
+      if (!response.ok) {
+        throw new Error("HTTP status not ok");
+      }
+    } catch (error) {
+      // A future poll or reconnect will retry.
+    }
+  };
+
+  const startTimeSync = () => {
+    syncEspTime();
+    if (timeSyncTimer !== null) {
+      window.clearInterval(timeSyncTimer);
+    }
+    timeSyncTimer = window.setInterval(syncEspTime, 60000);
   };
 
   const formatTooltipValue = (value, unit, digits = 0) => {
@@ -2475,6 +2518,7 @@ window.addEventListener("load", () => {
 
   startPolling();
   connectWebSocket();
+  startTimeSync();
 
   if (ui.startMotorTestButton) {
     ui.startMotorTestButton.addEventListener("click", runMotorTest);
