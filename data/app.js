@@ -2015,6 +2015,7 @@ window.addEventListener("load", () => {
 
     overviewMotorCommandPending = true;
     setOverviewMotorControlsState(true);
+    setStatusModalState(true, "Writing to ESC");
     if (pendingText) {
       setHealth(ui.overviewThrottleHealth, pendingText, "warn");
     }
@@ -2037,6 +2038,7 @@ window.addEventListener("load", () => {
     } catch (error) {
       setHealth(ui.overviewThrottleHealth, "Motor command failed", "error");
     } finally {
+      setStatusModalState(false);
       overviewMotorCommandPending = false;
       setOverviewMotorControlsState(false);
     }
