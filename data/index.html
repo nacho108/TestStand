@@ -473,54 +473,66 @@
 
           <div class="overview-motor-controls">
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-esc-poles-button" type="button">Change Motor poles</button>
+              <span class="config-button-wrap" id="config-esc-poles-button-wrap">
+                <button class="test-button" id="config-esc-poles-button" type="button">Change Motor poles</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-esc-poles-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-esc-poles-value" type="number" min="2" max="100" step="1" value="28">
+                  <input id="config-esc-poles-value" type="number" min="3" max="99" step="1" value="28">
                 </div>
               </label>
             </div>
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-esc-kv-button" type="button">Change Motor kv</button>
+              <span class="config-button-wrap" id="config-esc-kv-button-wrap">
+                <button class="test-button" id="config-esc-kv-button" type="button">Change Motor kv</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-esc-kv-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-esc-kv-value" type="number" min="20" max="10220" step="40" value="1020">
+                  <input id="config-esc-kv-value" type="number" min="11" max="49999" step="1" value="1020">
                 </div>
               </label>
             </div>
             <button class="test-button" id="config-esc-reverse-button" type="button">Reverse/normal</button>
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-current-low-button" type="button">Calibrate current low</button>
+              <span class="config-button-wrap" id="config-current-low-button-wrap">
+                <button class="test-button" id="config-current-low-button" type="button">Calibrate current low</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-current-low-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-current-low-value" type="number" min="0" step="0.001" value="0.000">
+                  <input id="config-current-low-value" type="number" min="0" max="299.999" step="0.001" value="0.000">
                   <span class="overview-motor-controls__unit">A</span>
                 </div>
               </label>
             </div>
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-current-high-button" type="button">Calibrate current high</button>
+              <span class="config-button-wrap" id="config-current-high-button-wrap">
+                <button class="test-button" id="config-current-high-button" type="button">Calibrate current high</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-current-high-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-current-high-value" type="number" min="0" step="0.001" value="10.000">
+                  <input id="config-current-high-value" type="number" min="0" max="299.999" step="0.001" value="10.000">
                   <span class="overview-motor-controls__unit">A</span>
                 </div>
               </label>
             </div>
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-voltage-low-button" type="button">Calibrate voltage low</button>
+              <span class="config-button-wrap" id="config-voltage-low-button-wrap">
+                <button class="test-button" id="config-voltage-low-button" type="button">Calibrate voltage low</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-voltage-low-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-voltage-low-value" type="number" min="0" step="0.001" value="0.000">
+                  <input id="config-voltage-low-value" type="number" min="0" max="299.999" step="0.001" value="0.000">
                   <span class="overview-motor-controls__unit">V</span>
                 </div>
               </label>
             </div>
             <div class="overview-motor-controls__top-row">
-              <button class="test-button" id="config-voltage-high-button" type="button">Calibrate voltage high</button>
+              <span class="config-button-wrap" id="config-voltage-high-button-wrap">
+                <button class="test-button" id="config-voltage-high-button" type="button">Calibrate voltage high</button>
+              </span>
               <label class="overview-motor-controls__field" for="config-voltage-high-value">
                 <div class="overview-motor-controls__input-wrap">
-                  <input id="config-voltage-high-value" type="number" min="0" step="0.001" value="25.000">
+                  <input id="config-voltage-high-value" type="number" min="0" max="299.999" step="0.001" value="25.000">
                   <span class="overview-motor-controls__unit">V</span>
                 </div>
               </label>

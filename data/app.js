@@ -28,17 +28,23 @@ window.addEventListener("load", () => {
     overviewMotorSetButton: document.getElementById("overview-motor-set-button"),
     overviewMotorStopButton: document.getElementById("overview-motor-stop-button"),
     configEscPolesValue: document.getElementById("config-esc-poles-value"),
+    configEscPolesButtonWrap: document.getElementById("config-esc-poles-button-wrap"),
     configEscPolesButton: document.getElementById("config-esc-poles-button"),
     configEscKvValue: document.getElementById("config-esc-kv-value"),
+    configEscKvButtonWrap: document.getElementById("config-esc-kv-button-wrap"),
     configEscKvButton: document.getElementById("config-esc-kv-button"),
     configEscReverseButton: document.getElementById("config-esc-reverse-button"),
     configCurrentLowValue: document.getElementById("config-current-low-value"),
+    configCurrentLowButtonWrap: document.getElementById("config-current-low-button-wrap"),
     configCurrentLowButton: document.getElementById("config-current-low-button"),
     configCurrentHighValue: document.getElementById("config-current-high-value"),
+    configCurrentHighButtonWrap: document.getElementById("config-current-high-button-wrap"),
     configCurrentHighButton: document.getElementById("config-current-high-button"),
     configVoltageLowValue: document.getElementById("config-voltage-low-value"),
+    configVoltageLowButtonWrap: document.getElementById("config-voltage-low-button-wrap"),
     configVoltageLowButton: document.getElementById("config-voltage-low-button"),
     configVoltageHighValue: document.getElementById("config-voltage-high-value"),
+    configVoltageHighButtonWrap: document.getElementById("config-voltage-high-button-wrap"),
     configVoltageHighButton: document.getElementById("config-voltage-high-button"),
     configScaleTareButton: document.getElementById("config-scale-tare-button"),
     configScaleCalibrationValue: document.getElementById("config-scale-calibration-value"),
@@ -1381,6 +1387,141 @@ window.addEventListener("load", () => {
     });
   };
 
+  const updateEscFieldValidationState = (options) => {
+    const {
+      input,
+      button,
+      buttonWrap,
+      validate,
+      message
+    } = options;
+
+    if (!input || !button) {
+      return;
+    }
+
+    const blocked = !validate(input.value);
+    button.classList.toggle("test-button--blocked", blocked);
+    setButtonTooltip(button, buttonWrap, blocked ? message : "");
+    button.disabled = configurationCommandPending || blocked;
+  };
+
+  const updateEscPairValidationState = (options) => {
+    const {
+      lowInput,
+      highInput,
+      lowButton,
+      highButton,
+      lowButtonWrap,
+      highButtonWrap,
+      validateValue,
+      lowMessage,
+      highMessage
+    } = options;
+
+    if (!lowInput || !highInput || !lowButton || !highButton) {
+      return;
+    }
+
+    const lowValue = Number(lowInput.value);
+    const highValue = Number(highInput.value);
+    const lowValid = validateValue(lowInput.value);
+    const highValid = validateValue(highInput.value);
+    const pairComparable = lowValid && highValid;
+    const lowBlocked = !lowValid || (pairComparable && lowValue >= highValue);
+    const highBlocked = !highValid || (pairComparable && highValue <= lowValue);
+
+    lowButton.classList.toggle("test-button--blocked", lowBlocked);
+    highButton.classList.toggle("test-button--blocked", highBlocked);
+    setButtonTooltip(
+      lowButton,
+      lowButtonWrap,
+      !lowValid ? lowMessage.range : (pairComparable && lowValue >= highValue ? lowMessage.pair : "")
+    );
+    setButtonTooltip(
+      highButton,
+      highButtonWrap,
+      !highValid ? highMessage.range : (pairComparable && highValue <= lowValue ? highMessage.pair : "")
+    );
+    lowButton.disabled = configurationCommandPending || lowBlocked;
+    highButton.disabled = configurationCommandPending || highBlocked;
+  };
+
+  const isValidEscPolesValue = (value) => {
+    const numericValue = Number(value);
+    return `${value}`.trim() !== ""
+      && Number.isInteger(numericValue)
+      && numericValue > 2
+      && numericValue < 100;
+  };
+
+  const isValidEscKvValue = (value) => {
+    const numericValue = Number(value);
+    return `${value}`.trim() !== ""
+      && Number.isInteger(numericValue)
+      && numericValue > 10
+      && numericValue < 50000;
+  };
+
+  const isValidEscCalibrationValue = (value) => {
+    const numericValue = Number(value);
+    return `${value}`.trim() !== ""
+      && Number.isFinite(numericValue)
+      && numericValue >= 0
+      && numericValue < 300;
+  };
+
+  const updateEscConfigurationValidationState = () => {
+    updateEscFieldValidationState({
+      input: ui.configEscPolesValue,
+      button: ui.configEscPolesButton,
+      buttonWrap: ui.configEscPolesButtonWrap,
+      validate: isValidEscPolesValue,
+      message: "Motor poles must be greater than 2 and less than 100."
+    });
+    updateEscFieldValidationState({
+      input: ui.configEscKvValue,
+      button: ui.configEscKvButton,
+      buttonWrap: ui.configEscKvButtonWrap,
+      validate: isValidEscKvValue,
+      message: "Motor kv must be greater than 10 and less than 50000."
+    });
+    updateEscPairValidationState({
+      lowInput: ui.configCurrentLowValue,
+      highInput: ui.configCurrentHighValue,
+      lowButton: ui.configCurrentLowButton,
+      highButton: ui.configCurrentHighButton,
+      lowButtonWrap: ui.configCurrentLowButtonWrap,
+      highButtonWrap: ui.configCurrentHighButtonWrap,
+      validateValue: isValidEscCalibrationValue,
+      lowMessage: {
+        range: "Current calibration must be greater than or equal to 0 A and less than 300 A.",
+        pair: "Current low calibration must be lower than current high calibration."
+      },
+      highMessage: {
+        range: "Current calibration must be greater than or equal to 0 A and less than 300 A.",
+        pair: "Current high calibration must be higher than current low calibration."
+      }
+    });
+    updateEscPairValidationState({
+      lowInput: ui.configVoltageLowValue,
+      highInput: ui.configVoltageHighValue,
+      lowButton: ui.configVoltageLowButton,
+      highButton: ui.configVoltageHighButton,
+      lowButtonWrap: ui.configVoltageLowButtonWrap,
+      highButtonWrap: ui.configVoltageHighButtonWrap,
+      validateValue: isValidEscCalibrationValue,
+      lowMessage: {
+        range: "Voltage calibration must be greater than or equal to 0 V and less than 300 V.",
+        pair: "Voltage low calibration must be lower than voltage high calibration."
+      },
+      highMessage: {
+        range: "Voltage calibration must be greater than or equal to 0 V and less than 300 V.",
+        pair: "Voltage high calibration must be higher than voltage low calibration."
+      }
+    });
+  };
+
   const setConfigurationControlsState = (disabled = false) => {
     [
       ui.configEscPolesValue,
@@ -1417,6 +1558,7 @@ window.addEventListener("load", () => {
       }
     });
 
+    updateEscConfigurationValidationState();
     updateSafetyValidationState();
   };
 
@@ -1513,6 +1655,7 @@ window.addEventListener("load", () => {
     setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiHiValue, data.safety_motor_temp_hihi_c, 0);
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 0);
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 0);
+    updateEscConfigurationValidationState();
     updateSafetyValidationState();
     updateChart(chartContexts.testing, cachedTestResults);
     if (Boolean(data.test_running)) {
@@ -1744,12 +1887,12 @@ window.addEventListener("load", () => {
   };
 
   const runEscPolesCommand = async () => {
-    if (!ui.configEscPolesValue) {
+    if (!ui.configEscPolesValue || ui.configEscPolesButton?.disabled) {
       return;
     }
 
     const targetValue = Number(ui.configEscPolesValue.value);
-    if (!Number.isInteger(targetValue) || targetValue < 2 || targetValue > 100) {
+    if (!isValidEscPolesValue(ui.configEscPolesValue.value)) {
       ui.configEscPolesValue.focus();
       return;
     }
@@ -1759,12 +1902,12 @@ window.addEventListener("load", () => {
   };
 
   const runEscKvCommand = async () => {
-    if (!ui.configEscKvValue) {
+    if (!ui.configEscKvValue || ui.configEscKvButton?.disabled) {
       return;
     }
 
     const targetValue = Number(ui.configEscKvValue.value);
-    if (!Number.isInteger(targetValue) || targetValue < 20 || targetValue > 10220) {
+    if (!isValidEscKvValue(ui.configEscKvValue.value)) {
       ui.configEscKvValue.focus();
       return;
     }
@@ -1783,7 +1926,7 @@ window.addEventListener("load", () => {
     }
 
     const targetValue = Number(input.value);
-    if (!Number.isFinite(targetValue) || targetValue < 0) {
+    if (!isValidEscCalibrationValue(input.value)) {
       input.focus();
       return;
     }
@@ -1794,18 +1937,34 @@ window.addEventListener("load", () => {
   };
 
   const runCurrentLowCalibrationCommand = async () => {
+    if (ui.configCurrentLowButton?.disabled) {
+      return;
+    }
+
     await runCalibrationPointCommand(ui.configCurrentLowValue, "calibrate current low ");
   };
 
   const runCurrentHighCalibrationCommand = async () => {
+    if (ui.configCurrentHighButton?.disabled) {
+      return;
+    }
+
     await runCalibrationPointCommand(ui.configCurrentHighValue, "calibrate current high ");
   };
 
   const runVoltageLowCalibrationCommand = async () => {
+    if (ui.configVoltageLowButton?.disabled) {
+      return;
+    }
+
     await runCalibrationPointCommand(ui.configVoltageLowValue, "calibrate voltage low ");
   };
 
   const runVoltageHighCalibrationCommand = async () => {
+    if (ui.configVoltageHighButton?.disabled) {
+      return;
+    }
+
     await runCalibrationPointCommand(ui.configVoltageHighValue, "calibrate voltage high ");
   };
 
@@ -2210,6 +2369,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configEscPolesValue) {
+    ui.configEscPolesValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configEscPolesValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2223,6 +2383,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configEscKvValue) {
+    ui.configEscKvValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configEscKvValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2240,6 +2401,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configCurrentLowValue) {
+    ui.configCurrentLowValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configCurrentLowValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2253,6 +2415,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configCurrentHighValue) {
+    ui.configCurrentHighValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configCurrentHighValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2266,6 +2429,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configVoltageLowValue) {
+    ui.configVoltageLowValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configVoltageLowValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2279,6 +2443,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configVoltageHighValue) {
+    ui.configVoltageHighValue.addEventListener("input", updateEscConfigurationValidationState);
     ui.configVoltageHighValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2331,6 +2496,8 @@ window.addEventListener("load", () => {
       }
     });
   }
+
+  updateEscConfigurationValidationState();
 
   if (ui.configSafetyMotorTempHiButton) {
     ui.configSafetyMotorTempHiButton.addEventListener("click", runSafetyMotorTempHiCommand);
