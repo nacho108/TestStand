@@ -250,6 +250,73 @@ window.addEventListener("load", () => {
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
   let studyDatasets = [];
+  const safetyHighlightDurationMs = 2000;
+  const safetyHighlightTimers = new Map();
+
+  const getHighlightTargets = () => ({
+    current: [
+      ui.current?.closest(".metric-row") || null,
+      ...(chartContexts.testing.rightCurrentTicks || [])
+    ],
+    escTemp: [
+      ui.escTemp?.closest(".metric-row") || null
+    ],
+    motorTemp: [
+      ui.motorTemp?.closest(".metric-row") || null,
+      ...(chartContexts.testing.rightTempTicks || [])
+    ]
+  });
+
+  const applySafetyHighlightState = (key, severity) => {
+    const targets = (getHighlightTargets()[key] || []).filter(Boolean);
+    targets.forEach((element) => {
+      element.classList.remove("safety-highlight--warn", "safety-highlight--error");
+      if (severity === "warn") {
+        element.classList.add("safety-highlight--warn");
+      } else if (severity === "error") {
+        element.classList.add("safety-highlight--error");
+      }
+    });
+  };
+
+  const clearSafetyHighlight = (key) => {
+    const timerInfo = safetyHighlightTimers.get(key);
+    if (timerInfo?.timeoutId) {
+      window.clearTimeout(timerInfo.timeoutId);
+    }
+    safetyHighlightTimers.delete(key);
+    applySafetyHighlightState(key, null);
+  };
+
+  const latchSafetyHighlight = (key, severity) => {
+    if (severity !== "warn" && severity !== "error") {
+      const timerInfo = safetyHighlightTimers.get(key);
+      if (!timerInfo) {
+        return;
+      }
+
+      const remainingMs = Math.max(0, timerInfo.expiresAt - Date.now());
+      if (timerInfo.timeoutId) {
+        window.clearTimeout(timerInfo.timeoutId);
+      }
+      timerInfo.timeoutId = window.setTimeout(() => clearSafetyHighlight(key), remainingMs);
+      safetyHighlightTimers.set(key, timerInfo);
+      return;
+    }
+
+    const expiresAt = Date.now() + safetyHighlightDurationMs;
+    const nextTimerInfo = {
+      severity,
+      expiresAt,
+      timeoutId: window.setTimeout(() => clearSafetyHighlight(key), safetyHighlightDurationMs)
+    };
+    const previousTimerInfo = safetyHighlightTimers.get(key);
+    if (previousTimerInfo?.timeoutId) {
+      window.clearTimeout(previousTimerInfo.timeoutId);
+    }
+    safetyHighlightTimers.set(key, nextTimerInfo);
+    applySafetyHighlightState(key, severity);
+  };
 
   const calculateThrustEfficiency = (thrustGrams, powerWatts) => {
     const thrust = Number(thrustGrams);
@@ -1282,6 +1349,9 @@ window.addEventListener("load", () => {
     setHealth(ui.thrustHealth, "Waiting for scale", "warn");
     setHealth(ui.motorTempHealth, "Waiting for IR sensor", "warn");
     setHealth(ui.ambientTempHealth, "Waiting for IR sensor", "warn");
+    latchSafetyHighlight("current", null);
+    latchSafetyHighlight("escTemp", null);
+    latchSafetyHighlight("motorTemp", null);
     setStopMotorTestButtonState(true);
     setDownloadTestButtonState(true);
     setMotorTestCoolingToggleState(motorTestCoolingUpdatePending);
@@ -1400,6 +1470,7 @@ window.addEventListener("load", () => {
         "Awaiting ESC telemetry"
       );
       setHealth(ui.currentHealth, currentSafety.text, currentSafety.severity);
+      latchSafetyHighlight("current", currentSafety.severity);
 
       const escTempSafety = describeSafetyState(
         data.safety_esc_temp_state,
@@ -1409,6 +1480,10 @@ window.addEventListener("load", () => {
         "Awaiting ESC telemetry"
       );
       setHealth(ui.escTempHealth, escTempSafety.text, escTempSafety.severity);
+      latchSafetyHighlight("escTemp", escTempSafety.severity);
+    } else {
+      latchSafetyHighlight("current", null);
+      latchSafetyHighlight("escTemp", null);
     }
 
     if (scaleReady) {
@@ -1428,10 +1503,12 @@ window.addEventListener("load", () => {
         "IR sensor offline"
       );
       setHealth(ui.motorTempHealth, motorTempSafety.text, motorTempSafety.severity);
+      latchSafetyHighlight("motorTemp", motorTempSafety.severity);
       setHealth(ui.ambientTempHealth, "Ambient sensor healthy");
     } else {
       setHealth(ui.motorTempHealth, "IR sensor offline", "error");
       setHealth(ui.ambientTempHealth, "IR sensor offline", "error");
+      latchSafetyHighlight("motorTemp", null);
     }
 
     return {
