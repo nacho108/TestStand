@@ -424,6 +424,7 @@ body::before {
   padding: 0 16px;
   border: 0;
   border-radius: 3px;
+  cursor: pointer;
   color: white;
   font: inherit;
   font-weight: 700;
