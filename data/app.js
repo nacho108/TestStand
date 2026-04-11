@@ -6,8 +6,6 @@ window.addEventListener("load", () => {
     stopMotorTestButton: document.getElementById("stop-motor-test-button"),
     downloadTestButton: document.getElementById("download-test-button"),
     motorTestDirectionInputs: Array.from(document.querySelectorAll('input[name="motor-test-direction"]')),
-    studyFileSelect: document.getElementById("study-file-select"),
-    loadStudyButton: document.getElementById("load-study-button"),
     openStudyFileButton: document.getElementById("open-study-file-button"),
     clearStudyButton: document.getElementById("clear-study-button"),
     studyLocalFileInput: document.getElementById("study-local-file-input"),
@@ -247,7 +245,6 @@ window.addEventListener("load", () => {
   let lastKnownTestRunning = false;
   let cachedTestResults = [];
   let cachedTestResultCount = 0;
-  let savedTestFiles = [];
   let studyDatasets = [];
 
   const calculateThrustEfficiency = (thrustGrams, powerWatts) => {
@@ -1277,66 +1274,6 @@ window.addEventListener("load", () => {
     }
   };
 
-  const rebuildStudySelect = () => {
-    if (!ui.studyFileSelect) {
-      return;
-    }
-
-    const previousValue = ui.studyFileSelect.value;
-    ui.studyFileSelect.innerHTML = "";
-
-    if (savedTestFiles.length === 0) {
-      const option = document.createElement("option");
-      option.value = "";
-      option.textContent = "No saved tests found";
-      ui.studyFileSelect.appendChild(option);
-      ui.studyFileSelect.disabled = true;
-      if (ui.loadStudyButton) {
-        ui.loadStudyButton.disabled = true;
-      }
-      return;
-    }
-
-    savedTestFiles.forEach((file) => {
-      const option = document.createElement("option");
-      option.value = file.name;
-      option.textContent = `${file.name} (${file.size} B)`;
-      ui.studyFileSelect.appendChild(option);
-    });
-
-    ui.studyFileSelect.disabled = false;
-    ui.studyFileSelect.value = savedTestFiles.some((file) => file.name === previousValue)
-      ? previousValue
-      : savedTestFiles[0].name;
-
-    if (ui.loadStudyButton) {
-      ui.loadStudyButton.disabled = false;
-    }
-  };
-
-  const refreshSavedTests = async () => {
-    try {
-      const response = await fetch("/api/tests", { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("HTTP status not ok");
-      }
-
-      const payload = await response.json();
-      savedTestFiles = Array.isArray(payload.files) ? payload.files : [];
-      rebuildStudySelect();
-
-      if (savedTestFiles.length === 0) {
-        setStudyStatus("No saved CSV files found in storage.");
-      } else {
-        setStudyStatus(studyDatasets.length > 0 ? buildStudyLoadedSummary() : "Choose a saved CSV and load it into the chart.");
-      }
-    } catch (error) {
-      savedTestFiles = [];
-      rebuildStudySelect();
-      setStudyStatus("Could not read saved test list.");
-    }
-  };
-
   const setView = (view) => {
     links.forEach((link) => {
       link.classList.toggle("sidebar__nav-link--active", link.dataset.viewLink === view);
@@ -1355,7 +1292,6 @@ window.addEventListener("load", () => {
     setText(ui.viewTitle, viewTitles[view] || "Live overview");
 
     if (view === "study") {
-      refreshSavedTests();
       requestAnimationFrame(syncStudyFilePickerHeight);
     }
   };
@@ -1867,44 +1803,6 @@ window.addEventListener("load", () => {
     link.remove();
   };
 
-  const loadStudyFile = async () => {
-    if (!ui.studyFileSelect || !ui.loadStudyButton || ui.studyFileSelect.disabled) {
-      return;
-    }
-
-    const filename = ui.studyFileSelect.value;
-    if (!filename) {
-      setStudyStatus("Choose a saved CSV first.");
-      return;
-    }
-
-    ui.loadStudyButton.disabled = true;
-    setStudyStatus(`Loading ${filename}...`);
-
-    try {
-      const response = await fetch(`/api/test-file?name=${encodeURIComponent(filename)}`, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("HTTP status not ok");
-      }
-
-      const csv = await response.text();
-      const rows = parseSavedTestCsv(csv);
-      upsertStudyDataset({
-        id: buildStudyDatasetId("saved", filename),
-        name: filename,
-        rows,
-        source: "saved",
-        visible: true
-      });
-      updateStudyChart();
-      setStudyStatus(`Loaded ${filename}. ${buildStudyLoadedSummary()}`);
-    } catch (error) {
-      setStudyStatus(`Could not load ${filename}.`);
-    } finally {
-      ui.loadStudyButton.disabled = ui.studyFileSelect.disabled;
-    }
-  };
-
   const openStudyFilePicker = () => {
     if (!ui.studyLocalFileInput) {
       return;
@@ -1917,9 +1815,7 @@ window.addEventListener("load", () => {
   const clearStudyGraph = () => {
     studyDatasets = [];
     updateStudyChart();
-    setStudyStatus(savedTestFiles.length > 0
-      ? "Choose a saved CSV and load it into the chart."
-      : "No saved CSV files found in storage.");
+    setStudyStatus("Choose CSV file(s) from PC to inspect.");
   };
 
   const loadStudyFileFromPc = async (event) => {
@@ -2243,10 +2139,6 @@ window.addEventListener("load", () => {
 
   if (ui.downloadTestButton) {
     ui.downloadTestButton.addEventListener("click", downloadTestFile);
-  }
-
-  if (ui.loadStudyButton) {
-    ui.loadStudyButton.addEventListener("click", loadStudyFile);
   }
 
   if (ui.openStudyFileButton) {

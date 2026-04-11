@@ -751,44 +751,6 @@ bool beginWebServer() {
         request->send(response);
     });
 
-    auto handleSavedTestCsvRequest = [](AsyncWebServerRequest* request) {
-        if (!request->hasParam("name")) {
-            request->send(400, "text/plain", "Missing name");
-            return;
-        }
-
-        const String requestedName = request->getParam("name")->value();
-        const String normalizedName = normalizeTestFilename(requestedName);
-        if (normalizedName.length() == 0) {
-            request->send(400, "text/plain", "Invalid file name");
-            return;
-        }
-
-        String csv;
-        if (!loadSavedTestCsv(normalizedName, csv)) {
-            request->send(404, "text/plain", "Saved test not found");
-            return;
-        }
-
-        AsyncWebServerResponse* response = request->beginResponse(200, "text/csv", csv);
-        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "0");
-        response->addHeader("Content-Disposition", "inline; filename=\"" + normalizedName + "\"");
-        request->send(response);
-    };
-
-    server.on("/api/test-file", HTTP_GET, handleSavedTestCsvRequest);
-    server.on("/api/tests/file", HTTP_GET, handleSavedTestCsvRequest);
-
-    server.on("/api/tests", HTTP_GET, [](AsyncWebServerRequest* request) {
-        AsyncWebServerResponse* response = request->beginResponse(200, "application/json", buildSavedTestsJson());
-        response->addHeader("Cache-Control", "no-store, no-cache, must-revalidate");
-        response->addHeader("Pragma", "no-cache");
-        response->addHeader("Expires", "0");
-        request->send(response);
-    });
-
     server.on("/api/command", HTTP_POST, [](AsyncWebServerRequest* request) {
         if (!request->hasParam("cmd", true)) {
             request->send(400, "application/json", "{\"ok\":false,\"error\":\"Missing cmd\"}");

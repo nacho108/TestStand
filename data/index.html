@@ -315,15 +315,10 @@
 
       <section class="testing-extras" data-view-pane="study" hidden>
         <div class="study-toolbar">
-          <label class="study-toolbar__field" for="study-file-select">
-            <span class="study-toolbar__label">Saved tests in memory</span>
-            <select id="study-file-select"></select>
-          </label>
-          <button class="test-button" id="load-study-button" type="button">Load from memory</button>
-          <button class="test-button test-button--secondary" id="open-study-file-button" type="button">Open CSV from PC</button>
-          <button class="test-button test-button--secondary" id="clear-study-button" type="button">Clear graph</button>
+          <button class="test-button" id="open-study-file-button" type="button">Open CSV from PC</button>
+          <button class="test-button" id="clear-study-button" type="button">Clear graph</button>
           <input id="study-local-file-input" type="file" accept=".csv,text/csv" multiple hidden>
-          <span class="study-toolbar__status" id="study-status">Choose a saved CSV to inspect.</span>
+          <span class="study-toolbar__status" id="study-status">Choose CSV file(s) from PC to inspect.</span>
         </div>
 
         <article class="chart-card">

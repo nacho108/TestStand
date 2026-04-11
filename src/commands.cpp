@@ -31,9 +31,6 @@ constexpr CommandHelpEntry kCommandHelpEntries[] = {
     {"motor test cooling on", "enable 30% post-test cooldown hold"},
     {"motor test cooling off", "disable post-test cooldown hold"},
     {"motor test stop", "stop the running motor test"},
-    {"test list", "list saved test CSV files in LittleFS"},
-    {"test get <filename>", "print a saved test CSV file"},
-    {"test remove <filename>", "delete a saved test CSV file"},
     {"restart", "reboot the ESP32 board"},
     {"pass", "reboot into ESC passthrough mode"},
     {"esc params", "read one AM32 ESC parameter with debug output"},
@@ -138,16 +135,6 @@ void printHelpFiltered(const String& filter) {
         Serial.print(matchCount);
         Serial.println(" matching command(s).");
     }
-}
-
-bool parseFilenameArgument(const String& cmd, const char* prefix, String& filename) {
-    if (!cmd.startsWith(prefix)) {
-        return false;
-    }
-
-    filename = cmd.substring(strlen(prefix));
-    filename.trim();
-    return true;
 }
 
 bool parseIntegerArgument(const String& cmd, const char* prefix, int& value) {
@@ -345,22 +332,6 @@ void handleCommand(String cmd) {
 
     if (cmd.equalsIgnoreCase("motor test pusher")) {
         runMotorTest(true);
-        return;
-    }
-
-    if (cmd.equalsIgnoreCase("test list")) {
-        listSavedTests();
-        return;
-    }
-
-    String filename;
-    if (parseFilenameArgument(cmd, "test get ", filename)) {
-        printSavedTest(filename);
-        return;
-    }
-
-    if (parseFilenameArgument(cmd, "test remove ", filename)) {
-        removeSavedTest(filename);
         return;
     }
 
