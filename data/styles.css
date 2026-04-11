@@ -633,10 +633,6 @@ body::before {
   gap: 12px;
 }
 
-.chart-sidebar--testing {
-  width: 176px;
-}
-
 .chart-sidebar--study {
   width: 220px;
 }
@@ -652,11 +648,6 @@ body::before {
   border: 1px solid rgba(32, 74, 112, 0.12);
   border-radius: 4px;
   background: rgba(237, 243, 251, 0.96);
-}
-
-.chart-summary-panel--testing {
-  max-height: calc(100% - 54px);
-  overflow: hidden;
 }
 
 .chart-summary-panel__title {
@@ -722,32 +713,28 @@ body::before {
 }
 
 .chart-plot--testing .chart-plot__grid {
-  inset: 18px 92px 36px 240px;
+  inset: 18px 92px 36px 92px;
 }
 
 .chart-plot--testing .chart-plot__axis--y {
-  left: 240px;
+  left: 92px;
 }
 
 .chart-plot--testing .chart-plot__axis--x {
-  left: 240px;
+  left: 92px;
 }
 
 .chart-plot--testing .chart-plot__axis--top {
-  left: 240px;
+  left: 92px;
 }
 
 .chart-plot--testing .chart-line,
 .chart-plot--testing .chart-line-layer {
-  inset: 18px 92px 36px 240px;
+  inset: 18px 92px 36px 92px;
 }
 
 .chart-plot--testing .chart-ticks {
-  left: 240px;
-}
-
-.chart-plot--testing .chart-scale--left {
-  left: 156px;
+  left: 92px;
 }
 
 .chart-plot--study .chart-plot__grid {
@@ -1260,10 +1247,6 @@ body::before {
 
   .chart-summary-panel {
     max-height: min(var(--study-file-picker-max-height, 104px), 100%);
-  }
-
-  .chart-summary-panel--testing {
-    max-height: 120px;
   }
 
   .chart-axis-picker {

@@ -21,8 +21,6 @@ window.addEventListener("load", () => {
     studyFileVisibilityEmpty: document.getElementById("study-file-visibility-empty"),
     studyFileVisibilityList: document.getElementById("study-file-visibility-list"),
     studyEfficiencySummaryGroup: document.getElementById("study-efficiency-summary-group"),
-    testingEfficiencySummaryEmpty: document.getElementById("testing-efficiency-summary-empty"),
-    testingEfficiencySummaryList: document.getElementById("testing-efficiency-summary-list"),
     studyEfficiencySummaryEmpty: document.getElementById("study-efficiency-summary-empty"),
     studyEfficiencySummaryList: document.getElementById("study-efficiency-summary-list"),
     overviewThrottle: document.getElementById("overview-throttle-value"),
@@ -320,11 +318,6 @@ window.addEventListener("load", () => {
     };
   };
 
-  const getMaxThrottle = (rows) => rows.reduce((maxValue, row) => {
-    const throttle = Number(row?.throttle_percent);
-    return Number.isFinite(throttle) ? Math.max(maxValue, throttle) : maxValue;
-  }, Number.NEGATIVE_INFINITY);
-
   const renderEfficiencySummaryList = (listElement, emptyElement, items, emptyMessage) => {
     if (!listElement || !emptyElement) {
       return;
@@ -346,37 +339,6 @@ window.addEventListener("load", () => {
         </article>
       `)
       .join("");
-  };
-
-  const updateTestingEfficiencySummary = (rows, isTestRunning) => {
-    const maxThrottle = getMaxThrottle(rows);
-    if (isTestRunning) {
-      renderEfficiencySummaryList(
-        ui.testingEfficiencySummaryList,
-        ui.testingEfficiencySummaryEmpty,
-        [],
-        "Results appear after the test finishes and reaches 80% throttle."
-      );
-      return;
-    }
-
-    if (!Number.isFinite(maxThrottle) || maxThrottle < 80) {
-      renderEfficiencySummaryList(
-        ui.testingEfficiencySummaryList,
-        ui.testingEfficiencySummaryEmpty,
-        [],
-        "Results will appear once a completed test reaches at least 80% throttle."
-      );
-      return;
-    }
-
-    const summary = calculateAverageEfficiencyForThrottleBand(rows, 40, 80);
-    renderEfficiencySummaryList(
-      ui.testingEfficiencySummaryList,
-      ui.testingEfficiencySummaryEmpty,
-      summary ? [{ label: "Completed test", ...summary }] : [],
-      "No valid efficiency points were found between 40% and 80% throttle."
-    );
   };
 
   const updateStudyEfficiencySummary = (datasets) => {
@@ -1435,8 +1397,6 @@ window.addEventListener("load", () => {
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 0);
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 0);
     updateChart(chartContexts.testing, cachedTestResults);
-    updateTestingEfficiencySummary(cachedTestResults, Boolean(data.test_running));
-
     if (Boolean(data.test_running)) {
       lastKnownTestRunning = true;
       motorTestPending = true;
@@ -1768,8 +1728,6 @@ window.addEventListener("load", () => {
     cachedTestResults = [];
     cachedTestResultCount = 0;
     updateChart(chartContexts.testing, []);
-    updateTestingEfficiencySummary(cachedTestResults, true);
-
     try {
       const direction = getSelectedMotorTestDirection();
       const body = new URLSearchParams({ cmd: direction === "pusher" ? "motor test pusher" : "motor test puller" });
