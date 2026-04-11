@@ -499,10 +499,21 @@ body::before {
   transition: opacity 160ms ease, box-shadow 160ms ease;
 }
 
+.config-button-wrap {
+  display: block;
+  width: 100%;
+}
+
 .test-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.test-button.test-button--blocked:disabled {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.88);
+  background: #94a0ad;
 }
 
 .test-button--stop {

@@ -45,16 +45,22 @@ window.addEventListener("load", () => {
     configScaleCalibrationButton: document.getElementById("config-scale-calibration-button"),
     configScaleFactorValue: document.getElementById("config-scale-factor-value"),
     configSafetyCurrentHiValue: document.getElementById("config-safety-current-hi-value"),
+    configSafetyCurrentHiButtonWrap: document.getElementById("config-safety-current-hi-button-wrap"),
     configSafetyCurrentHiButton: document.getElementById("config-safety-current-hi-button"),
     configSafetyCurrentHiHiValue: document.getElementById("config-safety-current-hihi-value"),
+    configSafetyCurrentHiHiButtonWrap: document.getElementById("config-safety-current-hihi-button-wrap"),
     configSafetyCurrentHiHiButton: document.getElementById("config-safety-current-hihi-button"),
     configSafetyMotorTempHiValue: document.getElementById("config-safety-motor-temp-hi-value"),
+    configSafetyMotorTempHiButtonWrap: document.getElementById("config-safety-motor-temp-hi-button-wrap"),
     configSafetyMotorTempHiButton: document.getElementById("config-safety-motor-temp-hi-button"),
     configSafetyMotorTempHiHiValue: document.getElementById("config-safety-motor-temp-hihi-value"),
+    configSafetyMotorTempHiHiButtonWrap: document.getElementById("config-safety-motor-temp-hihi-button-wrap"),
     configSafetyMotorTempHiHiButton: document.getElementById("config-safety-motor-temp-hihi-button"),
     configSafetyEscTempHiValue: document.getElementById("config-safety-esc-temp-hi-value"),
+    configSafetyEscTempHiButtonWrap: document.getElementById("config-safety-esc-temp-hi-button-wrap"),
     configSafetyEscTempHiButton: document.getElementById("config-safety-esc-temp-hi-button"),
     configSafetyEscTempHiHiValue: document.getElementById("config-safety-esc-temp-hihi-value"),
+    configSafetyEscTempHiHiButtonWrap: document.getElementById("config-safety-esc-temp-hihi-button-wrap"),
     configSafetyEscTempHiHiButton: document.getElementById("config-safety-esc-temp-hihi-button"),
     statusModal: document.getElementById("status-modal"),
     statusModalText: document.getElementById("status-modal-text"),
@@ -1290,6 +1296,91 @@ window.addEventListener("load", () => {
     }
   };
 
+  const setButtonTooltip = (button, wrapper, message = "") => {
+    [button, wrapper].forEach((element) => {
+      if (!element) {
+        return;
+      }
+
+      if (message) {
+        element.setAttribute("title", message);
+      } else {
+        element.removeAttribute("title");
+      }
+    });
+  };
+
+  const updateSafetyThresholdValidationState = (options) => {
+    const {
+      hiInput,
+      hihiInput,
+      hiButton,
+      hihiButton,
+      hiButtonWrap,
+      hihiButtonWrap,
+      label
+    } = options;
+
+    if (!hiInput || !hihiInput || !hiButton || !hihiButton) {
+      return;
+    }
+
+    const hiValue = Number(hiInput.value);
+    const hihiValue = Number(hihiInput.value);
+    const hasHiValue = `${hiInput.value}`.trim() !== "" && Number.isFinite(hiValue) && hiValue >= 0;
+    const hasHiHiValue = `${hihiInput.value}`.trim() !== "" && Number.isFinite(hihiValue) && hihiValue >= 0;
+
+    const hiBlocked = hasHiValue && hasHiHiValue && hiValue > hihiValue;
+    const hihiBlocked = hasHiValue && hasHiHiValue && hihiValue < hiValue;
+
+    hiButton.classList.toggle("test-button--blocked", hiBlocked);
+    hihiButton.classList.toggle("test-button--blocked", hihiBlocked);
+
+    setButtonTooltip(
+      hiButton,
+      hiButtonWrap,
+      hiBlocked ? `HI ${label} must be lower than HIHI ${label}.` : ""
+    );
+    setButtonTooltip(
+      hihiButton,
+      hihiButtonWrap,
+      hihiBlocked ? `HIHI ${label} must be higher than HI ${label}.` : ""
+    );
+
+    hiButton.disabled = configurationCommandPending || hiBlocked;
+    hihiButton.disabled = configurationCommandPending || hihiBlocked;
+  };
+
+  const updateSafetyValidationState = () => {
+    updateSafetyThresholdValidationState({
+      hiInput: ui.configSafetyCurrentHiValue,
+      hihiInput: ui.configSafetyCurrentHiHiValue,
+      hiButton: ui.configSafetyCurrentHiButton,
+      hihiButton: ui.configSafetyCurrentHiHiButton,
+      hiButtonWrap: ui.configSafetyCurrentHiButtonWrap,
+      hihiButtonWrap: ui.configSafetyCurrentHiHiButtonWrap,
+      label: "current"
+    });
+    updateSafetyThresholdValidationState({
+      hiInput: ui.configSafetyMotorTempHiValue,
+      hihiInput: ui.configSafetyMotorTempHiHiValue,
+      hiButton: ui.configSafetyMotorTempHiButton,
+      hihiButton: ui.configSafetyMotorTempHiHiButton,
+      hiButtonWrap: ui.configSafetyMotorTempHiButtonWrap,
+      hihiButtonWrap: ui.configSafetyMotorTempHiHiButtonWrap,
+      label: "motor temp"
+    });
+    updateSafetyThresholdValidationState({
+      hiInput: ui.configSafetyEscTempHiValue,
+      hihiInput: ui.configSafetyEscTempHiHiValue,
+      hiButton: ui.configSafetyEscTempHiButton,
+      hihiButton: ui.configSafetyEscTempHiHiButton,
+      hiButtonWrap: ui.configSafetyEscTempHiButtonWrap,
+      hihiButtonWrap: ui.configSafetyEscTempHiHiButtonWrap,
+      label: "ESC temp"
+    });
+  };
+
   const setConfigurationControlsState = (disabled = false) => {
     [
       ui.configEscPolesValue,
@@ -1325,6 +1416,8 @@ window.addEventListener("load", () => {
         element.disabled = disabled;
       }
     });
+
+    updateSafetyValidationState();
   };
 
   const setStatusModalState = (visible, text = "") => {
@@ -1420,6 +1513,7 @@ window.addEventListener("load", () => {
     setThresholdInputValueIfIdle(ui.configSafetyMotorTempHiHiValue, data.safety_motor_temp_hihi_c, 0);
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiValue, data.safety_esc_temp_hi_c, 0);
     setThresholdInputValueIfIdle(ui.configSafetyEscTempHiHiValue, data.safety_esc_temp_hihi_c, 0);
+    updateSafetyValidationState();
     updateChart(chartContexts.testing, cachedTestResults);
     if (Boolean(data.test_running)) {
       lastKnownTestRunning = true;
@@ -1756,12 +1850,48 @@ window.addEventListener("load", () => {
     await sendConfigurationCommand(`${prefix}${normalizedValue}`);
   };
 
-  const runSafetyCurrentHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiValue, "set current hi ", 0);
-  const runSafetyCurrentHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyCurrentHiHiValue, "set current hihi ", 0);
-  const runSafetyMotorTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiValue, "set motor temp hi ", 0);
-  const runSafetyMotorTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyMotorTempHiHiValue, "set motor temp hihi ", 0);
-  const runSafetyEscTempHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiValue, "set esc temp hi ", 0);
-  const runSafetyEscTempHiHiCommand = async () => runSafetyThresholdCommand(ui.configSafetyEscTempHiHiValue, "set esc temp hihi ", 0);
+  const runSafetyCurrentHiCommand = async () => {
+    if (ui.configSafetyCurrentHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyCurrentHiValue, "set current hi ", 0);
+  };
+  const runSafetyCurrentHiHiCommand = async () => {
+    if (ui.configSafetyCurrentHiHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyCurrentHiHiValue, "set current hihi ", 0);
+  };
+  const runSafetyMotorTempHiCommand = async () => {
+    if (ui.configSafetyMotorTempHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyMotorTempHiValue, "set motor temp hi ", 0);
+  };
+  const runSafetyMotorTempHiHiCommand = async () => {
+    if (ui.configSafetyMotorTempHiHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyMotorTempHiHiValue, "set motor temp hihi ", 0);
+  };
+  const runSafetyEscTempHiCommand = async () => {
+    if (ui.configSafetyEscTempHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyEscTempHiValue, "set esc temp hi ", 0);
+  };
+  const runSafetyEscTempHiHiCommand = async () => {
+    if (ui.configSafetyEscTempHiHiButton?.disabled) {
+      return;
+    }
+
+    await runSafetyThresholdCommand(ui.configSafetyEscTempHiHiValue, "set esc temp hihi ", 0);
+  };
 
   const runMotorTest = async () => {
     if (!ui.startMotorTestButton || motorTestPending) {
@@ -2179,6 +2309,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyCurrentHiValue) {
+    ui.configSafetyCurrentHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyCurrentHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2192,6 +2323,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyCurrentHiHiValue) {
+    ui.configSafetyCurrentHiHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyCurrentHiHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2205,6 +2337,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyMotorTempHiValue) {
+    ui.configSafetyMotorTempHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyMotorTempHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2218,6 +2351,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyMotorTempHiHiValue) {
+    ui.configSafetyMotorTempHiHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyMotorTempHiHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2231,6 +2365,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyEscTempHiValue) {
+    ui.configSafetyEscTempHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyEscTempHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2244,6 +2379,7 @@ window.addEventListener("load", () => {
   }
 
   if (ui.configSafetyEscTempHiHiValue) {
+    ui.configSafetyEscTempHiHiValue.addEventListener("input", updateSafetyValidationState);
     ui.configSafetyEscTempHiHiValue.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
@@ -2251,6 +2387,8 @@ window.addEventListener("load", () => {
       }
     });
   }
+
+  updateSafetyValidationState();
 
   if (ui.motorTestCoolingToggle) {
     ui.motorTestCoolingToggle.addEventListener("change", updateMotorTestCooling);
