@@ -1734,6 +1734,7 @@ window.addEventListener("load", () => {
     const direction = getSelectedMotorTestDirection();
     motorTestDirectionUpdatePending = true;
     setMotorTestDirectionState(true);
+    setStatusModalState(true, "Writing to ESC");
 
     try {
       const body = new URLSearchParams({
@@ -1756,6 +1757,7 @@ window.addEventListener("load", () => {
       setSelectedMotorTestDirection(direction === "pusher" ? "puller" : "pusher");
       setHealth(ui.powerHealth, "Failed to update thrust direction", "error");
     } finally {
+      setStatusModalState(false);
       motorTestDirectionUpdatePending = false;
       setMotorTestDirectionState(lastKnownTestRunning);
     }

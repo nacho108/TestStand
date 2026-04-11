@@ -171,17 +171,6 @@
           </label>
           <button class="test-button test-button--stop" id="stop-motor-test-button" type="button" disabled>Stop test</button>
           <button class="test-button test-button--download" id="download-test-button" type="button" disabled>Save Test to file</button>
-          <fieldset class="test-radio-group" id="motor-test-direction-group">
-            <legend>Direction</legend>
-            <label class="test-radio-option" for="motor-test-direction-puller">
-              <input id="motor-test-direction-puller" type="radio" name="motor-test-direction" value="puller" checked>
-              <span>Puller</span>
-            </label>
-            <label class="test-radio-option" for="motor-test-direction-pusher">
-              <input id="motor-test-direction-pusher" type="radio" name="motor-test-direction" value="pusher">
-              <span>Pusher</span>
-            </label>
-          </fieldset>
         </div>
 
         <article class="chart-card">
@@ -561,6 +550,17 @@
                 <input id="config-scale-factor-value" type="text" value="--" readonly>
               </div>
             </label>
+            <fieldset class="test-radio-group test-radio-group--config" id="motor-test-direction-group">
+              <legend>Direction</legend>
+              <label class="test-radio-option test-radio-option--config" for="motor-test-direction-puller">
+                <input id="motor-test-direction-puller" type="radio" name="motor-test-direction" value="puller" checked>
+                <span>Puller</span>
+              </label>
+              <label class="test-radio-option test-radio-option--config" for="motor-test-direction-pusher">
+                <input id="motor-test-direction-pusher" type="radio" name="motor-test-direction" value="pusher">
+                <span>Pusher</span>
+              </label>
+            </fieldset>
           </div>
         </article>
 
