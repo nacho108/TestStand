@@ -634,7 +634,7 @@ body::before {
 }
 
 .chart-sidebar--testing {
-  width: 156px;
+  width: 176px;
 }
 
 .chart-sidebar--study {
@@ -679,6 +679,10 @@ body::before {
   gap: 8px;
 }
 
+.chart-summary-panel .summary-metric__value--efficiency {
+  white-space: nowrap;
+}
+
 .chart-card__legend {
   display: flex;
   flex-wrap: wrap;
@@ -718,49 +722,49 @@ body::before {
 }
 
 .chart-plot--testing .chart-plot__grid {
-  inset: 18px 92px 36px 220px;
+  inset: 18px 92px 36px 240px;
 }
 
 .chart-plot--testing .chart-plot__axis--y {
-  left: 220px;
+  left: 240px;
 }
 
 .chart-plot--testing .chart-plot__axis--x {
-  left: 220px;
+  left: 240px;
 }
 
 .chart-plot--testing .chart-plot__axis--top {
-  left: 220px;
+  left: 240px;
 }
 
 .chart-plot--testing .chart-line,
 .chart-plot--testing .chart-line-layer {
-  inset: 18px 92px 36px 220px;
+  inset: 18px 92px 36px 240px;
 }
 
 .chart-plot--testing .chart-ticks {
-  left: 220px;
+  left: 240px;
 }
 
 .chart-plot--testing .chart-scale--left {
-  left: 136px;
+  left: 156px;
 }
 
 .chart-plot--study .chart-plot__grid {
-  inset: 18px 204px 36px 460px;
+  inset: 18px 204px 36px 320px;
 }
 
 .chart-plot--study .chart-plot__axis--y {
-  left: 460px;
+  left: 320px;
 }
 
 .chart-plot--study .chart-plot__axis--x {
-  left: 460px;
+  left: 320px;
   right: 204px;
 }
 
 .chart-plot--study .chart-plot__axis--top {
-  left: 460px;
+  left: 320px;
   right: 204px;
 }
 
@@ -770,16 +774,16 @@ body::before {
 
 .chart-plot--study .chart-line,
 .chart-plot--study .chart-line-layer {
-  inset: 18px 204px 36px 460px;
+  inset: 18px 204px 36px 320px;
 }
 
 .chart-plot--study .chart-ticks {
-  left: 460px;
+  left: 320px;
   right: 204px;
 }
 
 .chart-plot--study .chart-scale--left {
-  left: 376px;
+  left: 236px;
 }
 
 .chart-plot--study .chart-scale--right {
